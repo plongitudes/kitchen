@@ -101,3 +101,7 @@ secrets.yml
 # Documentation build artifacts
 docs/_build/
 site/
+
+# AI shit
+.beads
+.claude
