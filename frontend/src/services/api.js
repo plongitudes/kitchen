@@ -1,0 +1,110 @@
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Request interceptor to add auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response interceptor to handle auth errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('access_token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default api;
+
+// Auth API
+export const authAPI = {
+  register: (username, password) =>
+    api.post('/auth/register', { username, password }),
+
+  login: (username, password) =>
+    api.post('/auth/login', new URLSearchParams({ username, password }), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    }),
+
+  getCurrentUser: () => api.get('/me'),
+  listUsers: () => api.get('/auth/users'),
+};
+
+// Recipe API
+export const recipeAPI = {
+  list: (params) => api.get('/recipes', { params }),
+  get: (id) => api.get(`/recipes/${id}`),
+  create: (data) => api.post('/recipes', data),
+  update: (id, data) => api.put(`/recipes/${id}`, data),
+  delete: (id) => api.delete(`/recipes/${id}`),
+  restore: (id) => api.post(`/recipes/${id}/restore`),
+  importPreview: (url) => api.post('/recipes/import-preview', { url }),
+  reimport: (id) => api.post(`/recipes/${id}/reimport`),
+};
+
+// Template API
+export const templateAPI = {
+  list: (params) => api.get('/templates', { params }),
+  get: (id) => api.get(`/templates/${id}`),
+  create: (data) => api.post('/templates', data),
+  update: (id, data) => api.put(`/templates/${id}`, data),
+  fork: (id, newName) => api.post(`/templates/${id}/fork`, { new_name: newName }),
+  retire: (id) => api.delete(`/templates/${id}`),
+  hardDelete: (id) => api.delete(`/templates/${id}/hard`),
+};
+
+// Schedule API
+export const scheduleAPI = {
+  list: () => api.get('/schedules'),
+  get: (id) => api.get(`/schedules/${id}`),
+  create: (data) => api.post('/schedules', data),
+  update: (id, data) => api.put(`/schedules/${id}`, data),
+  delete: (id) => api.delete(`/schedules/${id}`),
+
+  // Template management
+  getCurrentTemplate: (sequenceId) => api.get(`/schedules/${sequenceId}/current-template`),
+  addTemplate: (sequenceId, data) => api.post(`/schedules/${sequenceId}/templates`, data),
+  removeTemplate: (sequenceId, templateId) => api.delete(`/schedules/${sequenceId}/templates/${templateId}`),
+  reorderTemplates: (sequenceId, templateIds) => api.put(`/schedules/${sequenceId}/templates/reorder`, { template_ids: templateIds }),
+};
+
+// Meal Plan API
+export const mealPlanAPI = {
+  list: (limit) => api.get('/meal-plans', { params: { limit } }),
+  get: (id) => api.get(`/meal-plans/${id}`),
+  getCurrent: (sequenceId) => api.get('/meal-plans/current', { params: { sequence_id: sequenceId } }),
+  advanceWeek: (sequenceId) => api.post('/meal-plans/advance-week', { sequence_id: sequenceId }),
+  startOnWeek: (sequenceId, data) => api.post('/meal-plans/start-on-week', data, { params: { sequence_id: sequenceId } }),
+
+  // Grocery lists
+  generateGroceryList: (instanceId, shoppingDate) =>
+    api.post(`/meal-plans/${instanceId}/grocery-lists/generate`, { shopping_date: shoppingDate }),
+  listGroceryLists: (instanceId) => api.get(`/meal-plans/${instanceId}/grocery-lists`),
+  getGroceryList: (id) => api.get(`/meal-plans/grocery-lists/${id}`),
+  listAllGroceryLists: () => api.get('/meal-plans/grocery-lists/all'),
+
+  // Meal assignments (per-instance modifications)
+  listAssignments: (instanceId) => api.get(`/meal-plans/${instanceId}/assignments`),
+  createAssignment: (instanceId, data) => api.post(`/meal-plans/${instanceId}/assignments`, data),
+  updateAssignment: (instanceId, assignmentId, data) => api.put(`/meal-plans/${instanceId}/assignments/${assignmentId}`, data),
+  deleteAssignment: (instanceId, assignmentId) => api.delete(`/meal-plans/${instanceId}/assignments/${assignmentId}`),
+};

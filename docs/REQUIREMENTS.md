@@ -1,5 +1,11 @@
 # Roanes Kitchen - Requirements & Design Document
 
+**Version:** Phase 1 MVP - Final
+**Date:** 2025-10-31
+**Status:** Ready for implementation
+
+---
+
 ## 1. Problem Statement
 
 Two people sharing meal prep responsibilities need a self-hosted way to manage a growing library of recipes, organize them into themed weekly rotations, and generate grocery lists based on upcoming meals. Currently handled via Notion, which is too limited for this use case.

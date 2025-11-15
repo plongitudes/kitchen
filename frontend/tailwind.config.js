@@ -1,0 +1,63 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        // Gruvbox Dark colors
+        'gruvbox-dark': {
+          bg: '#282828',
+          'bg-soft': '#32302f',
+          'bg-hard': '#1d2021',
+          fg: '#ebdbb2',
+          'fg-soft': '#d5c4a1',
+          red: '#cc241d',
+          'red-bright': '#fb4934',
+          green: '#98971a',
+          'green-bright': '#b8bb26',
+          yellow: '#d79921',
+          'yellow-bright': '#fabd2f',
+          blue: '#458588',
+          'blue-bright': '#83a598',
+          purple: '#b16286',
+          'purple-bright': '#d3869b',
+          aqua: '#689d6a',
+          'aqua-bright': '#8ec07c',
+          gray: '#a89984',
+          'gray-bright': '#928374',
+          orange: '#d65d0e',
+          'orange-bright': '#fe8019',
+        },
+        // Gruvbox Light colors
+        'gruvbox-light': {
+          bg: '#fbf1c7',
+          'bg-soft': '#f2e5bc',
+          'bg-hard': '#f9f5d7',
+          fg: '#3c3836',
+          'fg-soft': '#504945',
+          red: '#cc241d',
+          'red-bright': '#9d0006',
+          green: '#98971a',
+          'green-bright': '#79740e',
+          yellow: '#d79921',
+          'yellow-bright': '#b57614',
+          blue: '#458588',
+          'blue-bright': '#076678',
+          purple: '#b16286',
+          'purple-bright': '#8f3f71',
+          aqua: '#689d6a',
+          'aqua-bright': '#427b58',
+          gray: '#7c6f64',
+          'gray-bright': '#928374',
+          orange: '#d65d0e',
+          'orange-bright': '#af3a03',
+        },
+      },
+    },
+  },
+  plugins: [],
+}

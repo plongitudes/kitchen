@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: roanes-kitchen-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
+      POSTGRES_DB: roanes_kitchen
+    volumes:
+      # Unraid volume mapping
+      - ${APPDATA_PATH:-./data}/postgres:/var/lib/postgresql/data
+    networks:
+      - roanes-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d roanes_kitchen"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: roanes-kitchen-backend
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://admin:${POSTGRES_PASSWORD:-admin}@postgres:5432/roanes_kitchen
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - DEBUG=false
+      - ENVIRONMENT=production
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
+      - DISCORD_CHANNEL_ID=${DISCORD_CHANNEL_ID:-}
+    volumes:
+      # Logs volume
+      - ${APPDATA_PATH:-./data}/logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - roanes-network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
+    container_name: roanes-kitchen-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    depends_on:
+      - backend
+    networks:
+      - roanes-network
+
+  backup:
+    image: postgres:15-alpine
+    container_name: roanes-kitchen-backup
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
+      POSTGRES_DB: roanes_kitchen
+      POSTGRES_HOST: postgres
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+    volumes:
+      # Backup volume
+      - ${APPDATA_PATH:-./data}/backups:/backups
+      - ./scripts/backup.sh:/backup.sh:ro
+      - ./scripts/crontab:/etc/crontabs/root:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - roanes-network
+    entrypoint: /bin/sh
+    command: -c "chmod +x /backup.sh && crond -f -l 2"
+
+networks:
+  roanes-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  backups:
+  logs:
