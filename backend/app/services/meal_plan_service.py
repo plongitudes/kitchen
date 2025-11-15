@@ -2,12 +2,17 @@ from typing import Optional, List
 from uuid import UUID
 from datetime import date, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, desc
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy import select, and_, desc
+from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 
 from app.models.meal_plan import MealPlanInstance, MealAssignment
-from app.models.schedule import ScheduleSequence, WeekTemplate, SequenceWeekMapping, WeekDayAssignment
+from app.models.schedule import (
+    ScheduleSequence,
+    WeekTemplate,
+    SequenceWeekMapping,
+    WeekDayAssignment,
+)
 from app.models.recipe import Recipe
 from app.schemas.meal_plan import DayAssignmentWithDate
 from app.services.schedule_service import ScheduleService
@@ -119,6 +124,7 @@ class MealPlanService:
         """
         # Verify template exists
         from app.services.template_service import TemplateService
+
         template = await TemplateService.get_template_by_id(
             db=db,
             template_id=template_id,
@@ -164,6 +170,7 @@ class MealPlanService:
 
         # Load meal_assignments for this instance (per-instance overrides)
         from app.models.meal_plan import MealAssignment
+
         meal_assignments_query = (
             select(MealAssignment)
             .where(MealAssignment.meal_plan_instance_id == instance.id)
@@ -193,7 +200,9 @@ class MealPlanService:
                 for meal_assignment in meal_assignments_by_day[day_of_week]:
                     recipe_name = None
                     if meal_assignment.recipe_id:
-                        recipe_query = select(Recipe).where(Recipe.id == meal_assignment.recipe_id)
+                        recipe_query = select(Recipe).where(
+                            Recipe.id == meal_assignment.recipe_id
+                        )
                         recipe_result = await db.execute(recipe_query)
                         recipe = recipe_result.scalar_one_or_none()
                         if recipe:
@@ -217,7 +226,9 @@ class MealPlanService:
                     if day_assignment.day_of_week == day_of_week:
                         recipe_name = None
                         if day_assignment.recipe_id:
-                            recipe_query = select(Recipe).where(Recipe.id == day_assignment.recipe_id)
+                            recipe_query = select(Recipe).where(
+                                Recipe.id == day_assignment.recipe_id
+                            )
                             recipe_result = await db.execute(recipe_query)
                             recipe = recipe_result.scalar_one_or_none()
                             if recipe:
@@ -237,17 +248,15 @@ class MealPlanService:
         # Calculate week_number from sequence position
         # Use the sequence_id to find the correct mapping
         from app.models.schedule import SequenceWeekMapping
+
         week_number = 0
 
         if instance.sequence_id:
             # Instance was created by a sequence - get position from that specific sequence
-            mapping_query = (
-                select(SequenceWeekMapping)
-                .where(
-                    SequenceWeekMapping.sequence_id == instance.sequence_id,
-                    SequenceWeekMapping.week_template_id == instance.week_template_id,
-                    SequenceWeekMapping.removed_at.is_(None)
-                )
+            mapping_query = select(SequenceWeekMapping).where(
+                SequenceWeekMapping.sequence_id == instance.sequence_id,
+                SequenceWeekMapping.week_template_id == instance.week_template_id,
+                SequenceWeekMapping.removed_at.is_(None),
             )
             mapping_result = await db.execute(mapping_query)
             mapping = mapping_result.scalar_one_or_none()
@@ -258,7 +267,7 @@ class MealPlanService:
                 select(SequenceWeekMapping)
                 .where(
                     SequenceWeekMapping.week_template_id == instance.week_template_id,
-                    SequenceWeekMapping.removed_at.is_(None)
+                    SequenceWeekMapping.removed_at.is_(None),
                 )
                 .limit(1)
             )
@@ -407,7 +416,10 @@ class MealPlanService:
         # Verify the template and position match
         target_mapping = None
         for mapping in mappings:
-            if mapping.week_template_id == week_template_id and mapping.position == position:
+            if (
+                mapping.week_template_id == week_template_id
+                and mapping.position == position
+            ):
                 target_mapping = mapping
                 break
 
@@ -424,10 +436,14 @@ class MealPlanService:
 
         # Check if there's an existing instance for this sequence for the current week
         # Query for instances with the same start date OR the sequence's current instance
-        existing_instance_query = select(MealPlanInstance).where(
-            MealPlanInstance.sequence_id == sequence_id,
-            MealPlanInstance.instance_start_date == instance_start_date
-        ).options(selectinload(MealPlanInstance.meal_assignments))
+        existing_instance_query = (
+            select(MealPlanInstance)
+            .where(
+                MealPlanInstance.sequence_id == sequence_id,
+                MealPlanInstance.instance_start_date == instance_start_date,
+            )
+            .options(selectinload(MealPlanInstance.meal_assignments))
+        )
 
         existing_instance_result = await db.execute(existing_instance_query)
         existing_instance = existing_instance_result.scalar_one_or_none()
@@ -439,16 +455,20 @@ class MealPlanService:
             # Use the existing instance's start date for calculating which days are in the past
             existing_start_date = existing_instance.instance_start_date
             for assignment in existing_instance.meal_assignments:
-                assignment_date = existing_start_date + timedelta(days=assignment.day_of_week)
+                assignment_date = existing_start_date + timedelta(
+                    days=assignment.day_of_week
+                )
                 if assignment_date < today:
                     # Store data to recreate this assignment
-                    preserved_assignments.append({
-                        "day_of_week": assignment.day_of_week,
-                        "assigned_user_id": assignment.assigned_user_id,
-                        "action": assignment.action,
-                        "recipe_id": assignment.recipe_id,
-                        "order": assignment.order,
-                    })
+                    preserved_assignments.append(
+                        {
+                            "day_of_week": assignment.day_of_week,
+                            "assigned_user_id": assignment.assigned_user_id,
+                            "action": assignment.action,
+                            "recipe_id": assignment.recipe_id,
+                            "order": assignment.order,
+                        }
+                    )
 
             # Delete the old instance (cascades to meal_assignments and grocery_lists)
             await db.delete(existing_instance)
@@ -465,8 +485,7 @@ class MealPlanService:
         # Add preserved assignments back
         for assignment_data in preserved_assignments:
             meal_assignment = MealAssignment(
-                meal_plan_instance_id=new_instance.id,
-                **assignment_data
+                meal_plan_instance_id=new_instance.id, **assignment_data
             )
             db.add(meal_assignment)
 
@@ -520,7 +539,9 @@ class MealPlanService:
         from app.models.meal_plan import MealAssignment
 
         # Verify instance exists
-        instance = await MealPlanService.get_instance_by_id(db=db, instance_id=instance_id)
+        instance = await MealPlanService.get_instance_by_id(
+            db=db, instance_id=instance_id
+        )
         if not instance:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -591,7 +612,10 @@ class MealPlanService:
 
             # Verify this template assignment belongs to the instance's template
             instance = await MealPlanService.get_instance_by_id(db, instance_id)
-            if not instance or template_assignment.week_template_id != instance.week_template_id:
+            if (
+                not instance
+                or template_assignment.week_template_id != instance.week_template_id
+            ):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Assignment does not belong to this instance's template",

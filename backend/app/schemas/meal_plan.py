@@ -129,7 +129,7 @@ class GroceryListItemResponse(BaseModel):
 
     @field_validator("source_recipe_ids", mode="before")
     @classmethod
-    def parse_json_string(cls, v):
+    def parse_json_string(_cls, v):
         """Parse JSON string from database."""
         if isinstance(v, str):
             return json.loads(v)

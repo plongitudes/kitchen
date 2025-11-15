@@ -7,7 +7,6 @@ from sqlalchemy import text
 from datetime import datetime
 import subprocess
 import os
-import tempfile
 from pathlib import Path
 
 from app.core.deps import get_current_user, get_current_user_no_db
@@ -113,7 +112,9 @@ async def restore_backup(
         )
 
         if copy_result.returncode != 0:
-            raise Exception(f"Failed to copy backup to postgres container: {copy_result.stderr}")
+            raise Exception(
+                f"Failed to copy backup to postgres container: {copy_result.stderr}"
+            )
 
         # Run restore commands in postgres container to avoid backend connection issues
         restore_cmd = """
@@ -143,7 +144,9 @@ async def restore_backup(
         )
 
         if result.returncode != 0:
-            error_msg = f"Restore failed.\nStdout: {result.stdout}\nStderr: {result.stderr}"
+            error_msg = (
+                f"Restore failed.\nStdout: {result.stdout}\nStderr: {result.stderr}"
+            )
             raise Exception(error_msg)
 
         return {

@@ -11,10 +11,6 @@ const TemplateList = () => {
   const [showRetired, setShowRetired] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    loadTemplates();
-  }, [showRetired]);
-
   const loadTemplates = async () => {
     try {
       setLoading(true);
@@ -27,6 +23,11 @@ const TemplateList = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadTemplates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showRetired]);
 
   const filteredTemplates = templates.filter(template =>
     template.name.toLowerCase().includes(searchQuery.toLowerCase())

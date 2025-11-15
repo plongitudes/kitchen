@@ -19,10 +19,6 @@ const TemplateNew = () => {
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const defaultActions = ['cook', 'shop', 'takeout', 'rest', 'leftovers'];
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const loadData = async () => {
     try {
       setLoading(true);
@@ -52,6 +48,11 @@ const TemplateNew = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const updateAssignment = (dayIndex, field, value) => {
     const updated = [...assignments];

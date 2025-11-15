@@ -6,12 +6,6 @@ const RetireRecipeModal = ({ recipe, isOpen, onClose, onConfirm }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    if (isOpen && recipe) {
-      fetchUsage();
-    }
-  }, [isOpen, recipe]);
-
   const fetchUsage = async () => {
     try {
       setLoading(true);
@@ -24,6 +18,13 @@ const RetireRecipeModal = ({ recipe, isOpen, onClose, onConfirm }) => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (isOpen && recipe) {
+      fetchUsage();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, recipe]);
 
   const handleConfirm = () => {
     onConfirm();

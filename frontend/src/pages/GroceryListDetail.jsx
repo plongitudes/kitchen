@@ -11,10 +11,6 @@ const GroceryListDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    loadGroceryList();
-  }, [id]);
-
   const loadGroceryList = async () => {
     try {
       setLoading(true);
@@ -27,6 +23,11 @@ const GroceryListDetail = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadGroceryList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);

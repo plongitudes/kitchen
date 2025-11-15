@@ -17,12 +17,6 @@ const TemplateFormModal = ({ isOpen, onClose, onSuccess }) => {
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const defaultActions = ['cook', 'shop', 'takeout', 'rest', 'leftovers'];
 
-  useEffect(() => {
-    if (isOpen) {
-      loadData();
-    }
-  }, [isOpen]);
-
   const loadData = async () => {
     try {
       setLoading(true);
@@ -52,6 +46,13 @@ const TemplateFormModal = ({ isOpen, onClose, onSuccess }) => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (isOpen) {
+      loadData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   const updateAssignment = (dayIndex, field, value) => {
     const updated = [...assignments];
