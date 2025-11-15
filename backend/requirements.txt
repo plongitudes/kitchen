@@ -1,0 +1,45 @@
+# FastAPI and server
+fastapi==0.115.0
+uvicorn[standard]==0.24.0
+python-multipart==0.0.9
+
+# Database
+sqlalchemy==2.0.23
+alembic==1.12.1
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+
+# Authentication
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.1.1
+
+# Environment and config
+python-dotenv==1.0.0
+pydantic-settings==2.1.0
+
+# Unit conversion for grocery lists
+pint==0.23
+
+# Discord integration
+discord.py==2.3.2
+
+# Task scheduling
+APScheduler==3.10.4
+pytz==2023.3
+
+# Recipe scraping
+recipe-scrapers>=15.9.0
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+httpx==0.25.2
+aiosqlite==0.19.0
+
+# Development
+black==23.11.0
+flake8==6.1.0
+mypy==1.7.1
+debugpy==1.8.0

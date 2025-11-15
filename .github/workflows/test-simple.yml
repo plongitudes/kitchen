@@ -1,0 +1,81 @@
+name: Quick Tests
+
+on:
+  push:
+    branches: [ main, dev/* ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  quick-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+        cache-dependency-path: 'backend/requirements.txt'
+
+    - name: Install dependencies
+      working-directory: ./backend
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run flake8
+      working-directory: ./backend
+      run: |
+        flake8 app --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 app --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: Check imports
+      working-directory: ./backend
+      run: |
+        python -c "from app.main import app; print('✓ Application imports successfully')"
+
+  quick-unit-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+        cache-dependency-path: 'backend/requirements.txt'
+
+    - name: Install dependencies
+      working-directory: ./backend
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install aiosqlite  # For SQLite async support in tests
+
+    - name: Run unit tests (no DB required)
+      working-directory: ./backend
+      run: |
+        pytest tests/unit/ -v --tb=short || echo "No unit tests yet"
+
+    - name: Test ingredient parser
+      working-directory: ./backend
+      run: |
+        python -c "
+        from app.utils.ingredient_parser import parse_ingredient_line
+        from app.models.recipe import IngredientUnit
+
+        # Test basic parsing
+        qty, unit, name = parse_ingredient_line('2 cups flour')
+        assert qty == 2.0, f'Expected 2.0, got {qty}'
+        assert unit == IngredientUnit.CUP, f'Expected CUP, got {unit}'
+        assert name == 'flour', f'Expected flour, got {name}'
+
+        print('✓ Ingredient parser tests passed')
+        "

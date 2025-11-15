@@ -5,6 +5,9 @@
 *.db-wal
 *.sqlite
 *.sqlite3
+*.sql
+*.dump
+*.backup
 
 # IDE and editor files
 .vscode/
@@ -73,6 +76,11 @@ coverage.xml
 logs/
 **/*.log
 
+# Act (GitHub Actions local runner)
+act-output.log
+act-verbose.log
+*.act.log
+
 # Cache directories
 .cache/
 *.cache
@@ -105,3 +113,4 @@ site/
 # AI shit
 .beads
 .claude
+reference_material/notion_export
