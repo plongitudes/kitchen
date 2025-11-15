@@ -11,7 +11,6 @@ import RecipeDetail from './pages/RecipeDetail';
 import ScheduleList from './pages/ScheduleList';
 import ScheduleNew from './pages/ScheduleNew';
 import ScheduleDetail from './pages/ScheduleDetail';
-import WeekTemplateEditor from './pages/WeekTemplateEditor';
 import TemplateList from './pages/TemplateList';
 import TemplateNew from './pages/TemplateNew';
 import TemplateEdit from './pages/TemplateEdit';
@@ -60,8 +59,6 @@ function App() {
               <Route path="schedules" element={<ScheduleList />} />
               <Route path="schedules/new" element={<ScheduleNew />} />
               <Route path="schedules/:id" element={<ScheduleDetail />} />
-              <Route path="schedules/:sequenceId/weeks/new" element={<WeekTemplateEditor />} />
-              <Route path="schedules/:sequenceId/weeks/:weekId" element={<WeekTemplateEditor />} />
               <Route path="templates" element={<TemplateList />} />
               <Route path="templates/new" element={<TemplateNew />} />
               <Route path="templates/:id/edit" element={<TemplateEdit />} />

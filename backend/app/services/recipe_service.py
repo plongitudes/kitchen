@@ -9,7 +9,7 @@ from uuid import UUID
 from datetime import datetime
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 from recipe_scrapers import scrape_me, scrape_html, WebsiteNotImplementedError
@@ -52,9 +52,8 @@ class RecipeService:
         Returns None if no match.
         """
         # Search for alias match (case-insensitive)
-        query = (
-            select(IngredientAlias)
-            .where(IngredientAlias.alias.ilike(ingredient_name.strip()))
+        query = select(IngredientAlias).where(
+            IngredientAlias.alias.ilike(ingredient_name.strip())
         )
         result = await db.execute(query)
         alias = result.scalar_one_or_none()
@@ -63,9 +62,8 @@ class RecipeService:
             return alias.common_ingredient_id
 
         # Also check if it matches a common ingredient name directly
-        query = (
-            select(CommonIngredient)
-            .where(CommonIngredient.name.ilike(ingredient_name.strip()))
+        query = select(CommonIngredient).where(
+            CommonIngredient.name.ilike(ingredient_name.strip())
         )
         result = await db.execute(query)
         common_ing = result.scalar_one_or_none()
@@ -526,9 +524,7 @@ class RecipeService:
         instruction_data: RecipeInstructionUpdate,
     ) -> RecipeInstruction:
         """Update a recipe instruction."""
-        query = select(RecipeInstruction).where(
-            RecipeInstruction.id == instruction_id
-        )
+        query = select(RecipeInstruction).where(RecipeInstruction.id == instruction_id)
         result = await db.execute(query)
         instruction = result.scalar_one_or_none()
 
@@ -557,9 +553,7 @@ class RecipeService:
         instruction_id: UUID,
     ) -> None:
         """Delete a recipe instruction."""
-        query = select(RecipeInstruction).where(
-            RecipeInstruction.id == instruction_id
-        )
+        query = select(RecipeInstruction).where(RecipeInstruction.id == instruction_id)
         result = await db.execute(query)
         instruction = result.scalar_one_or_none()
 
@@ -600,7 +594,9 @@ class RecipeService:
             scraper = scrape_me(url)
         except WebsiteNotImplementedError:
             # Fallback to generic schema.org parsing for unsupported sites
-            logger.info(f"Site not in supported list, trying schema.org fallback for {url}")
+            logger.info(
+                f"Site not in supported list, trying schema.org fallback for {url}"
+            )
             try:
                 scraper = scrape_html(None, url, online=True, supported_only=False)
                 used_fallback = True
@@ -612,7 +608,6 @@ class RecipeService:
                 )
 
         try:
-
             # Parse ingredients
             ingredients = []
             for idx, ingredient_line in enumerate(scraper.ingredients()):
@@ -634,7 +629,8 @@ class RecipeService:
                 if instruction_text:
                     # Split by newlines or numbers
                     import re
-                    steps = re.split(r'\n+|\d+\.\s*', instruction_text)
+
+                    steps = re.split(r"\n+|\d+\.\s*", instruction_text)
                     instruction_list = [s.strip() for s in steps if s.strip()]
 
             for idx, step in enumerate(instruction_list, 1):

@@ -41,11 +41,6 @@ const Settings = () => {
     'Australia/Sydney',
   ];
 
-  useEffect(() => {
-    loadSettings();
-    checkDiscordStatus();
-  }, []);
-
   const loadSettings = async () => {
     try {
       setLoading(true);
@@ -99,6 +94,12 @@ const Settings = () => {
       setLoadingChannels(false);
     }
   };
+
+  useEffect(() => {
+    loadSettings();
+    checkDiscordStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSave = async (e) => {
     e.preventDefault();

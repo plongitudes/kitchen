@@ -15,10 +15,6 @@ const RecipeList = () => {
   const [importModalOpen, setImportModalOpen] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchRecipes();
-  }, [filter]);
-
   const fetchRecipes = async () => {
     try {
       setLoading(true);
@@ -31,6 +27,11 @@ const RecipeList = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchRecipes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter]);
 
   const handleRetireClick = (recipe) => {
     setRetireModal({ isOpen: true, recipe });

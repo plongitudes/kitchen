@@ -14,17 +14,19 @@ import sqlalchemy.dialects.postgresql as pg_dialect
 from sqlalchemy import String, TypeDecorator
 import uuid as uuid_module
 
+
 class SQLiteUUID(TypeDecorator):
     """UUID type that works with SQLite by storing UUIDs as 36-char strings."""
+
     impl = String
     cache_ok = True
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **_kwargs):
         # Ignore UUID-specific args
         super().__init__()
         self.impl = String(36)
 
-    def process_bind_param(self, value, dialect):
+    def process_bind_param(self, value, _dialect):
         """Convert UUID to string for SQLite."""
         if value is None:
             return value
@@ -32,7 +34,7 @@ class SQLiteUUID(TypeDecorator):
             return str(value)
         return str(value)
 
-    def process_result_value(self, value, dialect):
+    def process_result_value(self, value, _dialect):
         """Convert string back to UUID."""
         if value is None:
             return value
@@ -40,10 +42,12 @@ class SQLiteUUID(TypeDecorator):
             return value
         return uuid_module.UUID(value)
 
+
 # Replace PostgreSQL UUID globally before models are loaded
 pg_dialect.UUID = SQLiteUUID
 
 # Now safe to import everything else
+# flake8: noqa: E402
 import os
 import pytest
 from typing import Generator, AsyncGenerator
@@ -73,7 +77,12 @@ def db_engine():
     from app.models.recipe import Recipe, RecipeIngredient, RecipeInstruction
     from app.models.ingredient import CommonIngredient, IngredientAlias
     from app.models.meal_plan import MealPlanInstance, GroceryList, GroceryListItem
-    from app.models.schedule import ScheduleSequence, WeekTemplate, WeekDayAssignment, SequenceWeekMapping
+    from app.models.schedule import (
+        ScheduleSequence,
+        WeekTemplate,
+        WeekDayAssignment,
+        SequenceWeekMapping,
+    )
     from app.models.settings import Settings
 
     engine = create_engine(
@@ -84,7 +93,7 @@ def db_engine():
 
     # Enable foreign key constraints for SQLite
     @event.listens_for(engine, "connect")
-    def set_sqlite_pragma(dbapi_conn, connection_record):
+    def set_sqlite_pragma(dbapi_conn, _connection_record):
         cursor = dbapi_conn.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
@@ -123,7 +132,12 @@ async def async_db_engine():
     from app.models.recipe import Recipe, RecipeIngredient, RecipeInstruction
     from app.models.ingredient import CommonIngredient, IngredientAlias
     from app.models.meal_plan import MealPlanInstance, GroceryList, GroceryListItem
-    from app.models.schedule import ScheduleSequence, WeekTemplate, WeekDayAssignment, SequenceWeekMapping
+    from app.models.schedule import (
+        ScheduleSequence,
+        WeekTemplate,
+        WeekDayAssignment,
+        SequenceWeekMapping,
+    )
     from app.models.settings import Settings
 
     engine = create_async_engine(
@@ -271,7 +285,9 @@ def async_test_user_token(async_test_user) -> str:
 
 
 @pytest.fixture
-def async_authenticated_client(async_client: TestClient, async_test_user_token: str) -> TestClient:
+def async_authenticated_client(
+    async_client: TestClient, async_test_user_token: str
+) -> TestClient:
     """Create an async authenticated test client with JWT token in headers."""
     async_client.headers = {
         **async_client.headers,
