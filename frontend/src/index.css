@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gruvbox-dark-bg text-gruvbox-dark-fg;
+  }
+
+  body.light {
+    @apply bg-gruvbox-light-bg text-gruvbox-light-fg;
+  }
+}
