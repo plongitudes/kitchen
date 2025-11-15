@@ -17,6 +17,7 @@ const RecipeDetail = () => {
 
   useEffect(() => {
     fetchRecipe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchRecipe = async () => {

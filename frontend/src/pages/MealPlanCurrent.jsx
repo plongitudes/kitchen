@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { mealPlanAPI, scheduleAPI, recipeAPI, authAPI } from '../services/api';
+import { mealPlanAPI, recipeAPI, authAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 
 const MealPlanCurrent = () => {
@@ -19,16 +19,6 @@ const MealPlanCurrent = () => {
   const [saving, setSaving] = useState(false);
 
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-  useEffect(() => {
-    if (sequenceId) {
-      loadCurrentMealPlan();
-    }
-  }, [sequenceId]);
-
-  useEffect(() => {
-    loadUsersAndRecipes();
-  }, []);
 
   const loadUsersAndRecipes = async () => {
     try {
@@ -55,6 +45,18 @@ const MealPlanCurrent = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (sequenceId) {
+      loadCurrentMealPlan();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sequenceId]);
+
+  useEffect(() => {
+    loadUsersAndRecipes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleGenerateGroceryList = async (date) => {
     try {

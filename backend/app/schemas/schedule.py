@@ -107,7 +107,11 @@ class SequenceWeekMappingBase(BaseModel):
     """Base schema for sequence-week mappings."""
 
     week_template_id: UUID
-    position: Optional[int] = Field(None, ge=1, description="Position in sequence (1-indexed). If omitted, template is added to the end.")
+    position: Optional[int] = Field(
+        None,
+        ge=1,
+        description="Position in sequence (1-indexed). If omitted, template is added to the end.",
+    )
 
 
 class SequenceWeekMappingCreate(SequenceWeekMappingBase):
@@ -147,11 +151,13 @@ class ScheduleSequenceBase(BaseModel):
 
     name: str = Field(..., min_length=1)
     advancement_day_of_week: int = Field(..., ge=0, le=6)  # 0=Sunday, 6=Saturday
-    advancement_time: str = Field(..., pattern=r"^([01]\d|2[0-3]):([0-5]\d)$")  # HH:MM format
+    advancement_time: str = Field(
+        ..., pattern=r"^([01]\d|2[0-3]):([0-5]\d)$"
+    )  # HH:MM format
 
     @field_validator("advancement_time")
     @classmethod
-    def validate_time_format(cls, v: str) -> str:
+    def validate_time_format(_cls, v: str) -> str:
         """Validate time is in HH:MM format."""
         parts = v.split(":")
         if len(parts) != 2:
@@ -173,11 +179,13 @@ class ScheduleSequenceUpdate(BaseModel):
 
     name: Optional[str] = Field(None, min_length=1)
     advancement_day_of_week: Optional[int] = Field(None, ge=0, le=6)
-    advancement_time: Optional[str] = Field(None, pattern=r"^([01]\d|2[0-3]):([0-5]\d)$")
+    advancement_time: Optional[str] = Field(
+        None, pattern=r"^([01]\d|2[0-3]):([0-5]\d)$"
+    )
 
     @field_validator("advancement_time")
     @classmethod
-    def validate_time_format(cls, v: Optional[str]) -> Optional[str]:
+    def validate_time_format(_cls, v: Optional[str]) -> Optional[str]:
         """Validate time is in HH:MM format."""
         if v is None:
             return v
@@ -226,4 +234,6 @@ class StartScheduleRequest(BaseModel):
     """Schema for starting a schedule on an arbitrary week."""
 
     week_template_id: UUID = Field(..., description="The template to start with")
-    position: int = Field(..., ge=1, description="Position of the template in the sequence (1-indexed)")
+    position: int = Field(
+        ..., ge=1, description="Position of the template in the sequence (1-indexed)"
+    )

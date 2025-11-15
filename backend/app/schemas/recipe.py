@@ -19,11 +19,11 @@ class RecipeIngredientBase(BaseModel):
     unit: Optional[IngredientUnit] = None
     order: int = Field(..., ge=0)
 
-    @field_validator('unit', mode='before')
+    @field_validator("unit", mode="before")
     @classmethod
-    def validate_unit(cls, v):
+    def validate_unit(_cls, v):
         """Convert string to IngredientUnit enum by value, not name."""
-        if v is None or v == '':
+        if v is None or v == "":
             return None
         if isinstance(v, IngredientUnit):
             return v
@@ -49,11 +49,11 @@ class RecipeIngredientUpdate(BaseModel):
     unit: Optional[IngredientUnit] = None
     order: Optional[int] = Field(None, ge=0)
 
-    @field_validator('unit', mode='before')
+    @field_validator("unit", mode="before")
     @classmethod
-    def validate_unit(cls, v):
+    def validate_unit(_cls, v):
         """Convert string to IngredientUnit enum by value, not name."""
-        if v is None or v == '':
+        if v is None or v == "":
             return None
         if isinstance(v, IngredientUnit):
             return v

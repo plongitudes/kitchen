@@ -19,10 +19,6 @@ const ScheduleDetail = () => {
   const [showStartModal, setShowStartModal] = useState(false);
   const [newlyCreatedTemplateId, setNewlyCreatedTemplateId] = useState(null);
 
-  useEffect(() => {
-    loadScheduleAndTemplates();
-  }, [id]);
-
   const loadScheduleAndTemplates = async () => {
     try {
       setLoading(true);
@@ -36,6 +32,11 @@ const ScheduleDetail = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadScheduleAndTemplates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   const handleDragStart = (e, index) => {
     if (!reordering) return;
@@ -391,20 +392,6 @@ const ScheduleDetail = () => {
     const [loading, setLoading] = useState(true);
     const [adding, setAdding] = useState(false);
 
-    useEffect(() => {
-      loadAvailableTemplates();
-    }, []);
-
-    useEffect(() => {
-      // When create modal closes, refresh templates and auto-select if one was created
-      if (!showCreateModal && newlyCreatedTemplateId) {
-        loadAvailableTemplates().then(() => {
-          setSelectedTemplateIds(new Set([newlyCreatedTemplateId]));
-          setNewlyCreatedTemplateId(null);
-        });
-      }
-    }, [showCreateModal]);
-
     const loadAvailableTemplates = async () => {
       try {
         setLoading(true);
@@ -416,6 +403,22 @@ const ScheduleDetail = () => {
         setLoading(false);
       }
     };
+
+    useEffect(() => {
+      loadAvailableTemplates();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+      // When create modal closes, refresh templates and auto-select if one was created
+      if (!showCreateModal && newlyCreatedTemplateId) {
+        loadAvailableTemplates().then(() => {
+          setSelectedTemplateIds(new Set([newlyCreatedTemplateId]));
+          setNewlyCreatedTemplateId(null);
+        });
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [showCreateModal]);
 
     const toggleTemplate = (templateId) => {
       const newSelected = new Set(selectedTemplateIds);

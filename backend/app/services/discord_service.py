@@ -1,10 +1,9 @@
 """Discord bot service for sending notifications."""
+
 import discord
-from discord.ext import commands
 import asyncio
 from typing import Optional, List
 import logging
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +46,7 @@ class DiscordBot:
 
         @self.bot.event
         async def on_error(event, *args, **kwargs):
-            logger.error(f"Discord bot error in {event}: {args}")
+            logger.error(f"Discord bot error in {event}: {args}, {kwargs}")
 
         try:
             # Start bot in background task
@@ -111,7 +110,9 @@ class DiscordBot:
             return True
 
         except discord.Forbidden:
-            logger.error(f"Bot doesn't have permission to send messages to channel {self.channel_id}")
+            logger.error(
+                f"Bot doesn't have permission to send messages to channel {self.channel_id}"
+            )
             return False
         except discord.HTTPException as e:
             logger.error(f"Failed to send Discord message: {e}")
@@ -139,16 +140,20 @@ class DiscordBot:
             channels = []
             for guild in self.bot.guilds:
                 for channel in guild.text_channels:
-                    channels.append({
-                        "id": str(channel.id),
-                        "name": channel.name,
-                        "guild_name": guild.name,
-                        "position": channel.position,
-                    })
+                    channels.append(
+                        {
+                            "id": str(channel.id),
+                            "name": channel.name,
+                            "guild_name": guild.name,
+                            "position": channel.position,
+                        }
+                    )
 
             # Sort by guild name, then by position
             channels.sort(key=lambda c: (c["guild_name"], c["position"]))
-            logger.info(f"Fetched {len(channels)} channels from {len(self.bot.guilds)} guilds")
+            logger.info(
+                f"Fetched {len(channels)} channels from {len(self.bot.guilds)} guilds"
+            )
             return channels
 
         except Exception as e:
@@ -161,10 +166,7 @@ class NotificationFormatter:
 
     @staticmethod
     def format_action_notification(
-        day_name: str,
-        person_name: str,
-        action: str,
-        recipe_name: Optional[str] = None
+        day_name: str, person_name: str, action: str, recipe_name: Optional[str] = None
     ) -> str:
         """
         Format a daily action notification.
@@ -172,25 +174,22 @@ class NotificationFormatter:
         Example: "Today: Bob is cooking Tikka Masala"
         """
         action_verb_map = {
-            'cook': 'cooking',
-            'shop': 'shopping',
-            'takeout': 'ordering takeout',
-            'rest': 'taking a rest day',
-            'leftovers': 'eating leftovers',
+            "cook": "cooking",
+            "shop": "shopping",
+            "takeout": "ordering takeout",
+            "rest": "taking a rest day",
+            "leftovers": "eating leftovers",
         }
 
         action_verb = action_verb_map.get(action.lower(), action)
 
-        if recipe_name and action.lower() == 'cook':
+        if recipe_name and action.lower() == "cook":
             return f"**{day_name}:** {person_name} is {action_verb} **{recipe_name}**"
         else:
             return f"**{day_name}:** {person_name} is {action_verb}"
 
     @staticmethod
-    def format_shopping_notification(
-        shopping_date: str,
-        items: List[dict]
-    ) -> str:
+    def format_shopping_notification(shopping_date: str, items: List[dict]) -> str:
         """
         Format a shopping notification with grocery list.
 
@@ -204,9 +203,9 @@ class NotificationFormatter:
         ]
 
         for item in items:
-            quantity = item.get('total_quantity', 0)
-            unit = item.get('unit', '')
-            name = item.get('ingredient_name', '')
+            quantity = item.get("total_quantity", 0)
+            unit = item.get("unit", "")
+            name = item.get("ingredient_name", "")
             lines.append(f"• {quantity} {unit} {name}")
 
         lines.append("")
@@ -216,9 +215,7 @@ class NotificationFormatter:
 
     @staticmethod
     def format_week_transition(
-        theme_name: str,
-        week_number: int,
-        assignments_summary: List[dict]
+        theme_name: str, week_number: int, assignments_summary: List[dict]
     ) -> str:
         """
         Format a week transition notification.
@@ -236,18 +233,17 @@ class NotificationFormatter:
         ]
 
         for assignment in assignments_summary:
-            person = assignment.get('person_name', 'Unknown')
-            days = assignment.get('days', [])
+            person = assignment.get("person_name", "Unknown")
+            days = assignment.get("days", [])
             if days:
-                days_str = ' & '.join(days)
+                days_str = " & ".join(days)
                 lines.append(f"• {person}: {days_str}")
 
         return "\n".join(lines)
 
     @staticmethod
     def format_template_retirement(
-        template_name: str,
-        affected_sequences: List[dict]
+        template_name: str, affected_sequences: List[dict]
     ) -> str:
         """
         Format a template retirement notification.
@@ -267,10 +263,12 @@ class NotificationFormatter:
         ]
 
         for seq in affected_sequences:
-            sequence_name = seq.get('sequence_name', 'Unknown Schedule')
-            old_pos = seq.get('old_position', '?')
-            new_pos = seq.get('new_position', '?')
-            lines.append(f"• **{sequence_name}**: Auto-advanced from position {old_pos} to {new_pos}")
+            sequence_name = seq.get("sequence_name", "Unknown Schedule")
+            old_pos = seq.get("old_position", "?")
+            new_pos = seq.get("new_position", "?")
+            lines.append(
+                f"• **{sequence_name}**: Auto-advanced from position {old_pos} to {new_pos}"
+            )
 
         return "\n".join(lines)
 

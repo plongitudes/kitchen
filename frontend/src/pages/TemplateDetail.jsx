@@ -18,10 +18,6 @@ const TemplateDetail = () => {
 
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-  useEffect(() => {
-    loadTemplate();
-  }, [id]);
-
   const loadTemplate = async () => {
     try {
       setLoading(true);
@@ -38,6 +34,11 @@ const TemplateDetail = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadTemplate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   const getUsernameById = (userId) => {
     const user = users.find(u => u.id === userId);

@@ -2,11 +2,16 @@ from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 
-from app.models.schedule import ScheduleSequence, WeekTemplate, SequenceWeekMapping, WeekDayAssignment
+from app.models.schedule import (
+    ScheduleSequence,
+    WeekTemplate,
+    SequenceWeekMapping,
+    WeekDayAssignment,
+)
 from app.schemas.schedule import (
     ScheduleSequenceCreate,
     ScheduleSequenceUpdate,
@@ -135,7 +140,7 @@ class ScheduleService:
             select(SequenceWeekMapping)
             .where(
                 SequenceWeekMapping.sequence_id == sequence_id,
-                SequenceWeekMapping.removed_at.is_(None)
+                SequenceWeekMapping.removed_at.is_(None),
             )
             .options(selectinload(SequenceWeekMapping.week_template))
             .order_by(SequenceWeekMapping.position)
@@ -167,6 +172,7 @@ class ScheduleService:
 
         # Verify template exists
         from app.services.template_service import TemplateService
+
         template = await TemplateService.get_template_by_id(
             db=db,
             template_id=template_id,
@@ -213,7 +219,7 @@ class ScheduleService:
         query = select(SequenceWeekMapping).where(
             SequenceWeekMapping.sequence_id == sequence_id,
             SequenceWeekMapping.week_template_id == template_id,
-            SequenceWeekMapping.removed_at.is_(None)
+            SequenceWeekMapping.removed_at.is_(None),
         )
 
         result = await db.execute(query)
@@ -316,6 +322,7 @@ class ScheduleService:
             if mapping.position == current_index + 1:
                 # Load template with assignments
                 from app.services.template_service import TemplateService
+
                 template = await TemplateService.get_template_by_id(
                     db=db,
                     template_id=mapping.week_template_id,
@@ -353,6 +360,7 @@ class ScheduleService:
         """Create a new day assignment for a template."""
         # Verify template exists
         from app.services.template_service import TemplateService
+
         template = await TemplateService.get_template_by_id(
             db=db,
             template_id=template_id,

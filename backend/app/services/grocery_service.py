@@ -8,7 +8,7 @@ from typing import List, Dict, Optional
 from uuid import UUID
 from datetime import date, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 import json
@@ -215,9 +215,8 @@ class GroceryService:
             return []
 
         # Fetch all ingredients for these recipes
-        query = (
-            select(RecipeIngredient)
-            .where(RecipeIngredient.recipe_id.in_(recipe_ids))
+        query = select(RecipeIngredient).where(
+            RecipeIngredient.recipe_id.in_(recipe_ids)
         )
         result = await db.execute(query)
         all_ingredients = result.scalars().all()
@@ -278,10 +277,12 @@ class GroceryService:
 
             # Handle non-convertible units
             if unit in GroceryService.NON_CONVERTIBLE_UNITS:
-                count_quantities.append({
-                    "quantity": quantity,
-                    "unit": ing.unit,  # Preserve original case
-                })
+                count_quantities.append(
+                    {
+                        "quantity": quantity,
+                        "unit": ing.unit,  # Preserve original case
+                    }
+                )
                 continue
 
             # Try to parse as Pint quantity
@@ -295,16 +296,20 @@ class GroceryService:
                     weight_quantities.append(pint_qty)
                 else:
                     # Unknown dimensionality - treat as count
-                    count_quantities.append({
-                        "quantity": quantity,
-                        "unit": ing.unit,
-                    })
+                    count_quantities.append(
+                        {
+                            "quantity": quantity,
+                            "unit": ing.unit,
+                        }
+                    )
             except (DimensionalityError, Exception):
                 # Can't parse or convert - treat as count
-                count_quantities.append({
-                    "quantity": quantity,
-                    "unit": ing.unit,
-                })
+                count_quantities.append(
+                    {
+                        "quantity": quantity,
+                        "unit": ing.unit,
+                    }
+                )
 
         # Aggregate each dimensionality
         results = []
@@ -313,21 +318,25 @@ class GroceryService:
         if volume_quantities:
             total_volume = sum(volume_quantities)
             canonical_volume = total_volume.to(GroceryService.CANONICAL_VOLUME)
-            results.append({
-                "ingredient_name": ingredient_name,
-                "total_quantity": round(canonical_volume.magnitude, 3),
-                "unit": GroceryService.CANONICAL_VOLUME,
-            })
+            results.append(
+                {
+                    "ingredient_name": ingredient_name,
+                    "total_quantity": round(canonical_volume.magnitude, 3),
+                    "unit": GroceryService.CANONICAL_VOLUME,
+                }
+            )
 
         # Weight
         if weight_quantities:
             total_weight = sum(weight_quantities)
             canonical_weight = total_weight.to(GroceryService.CANONICAL_WEIGHT)
-            results.append({
-                "ingredient_name": ingredient_name,
-                "total_quantity": round(canonical_weight.magnitude, 3),
-                "unit": GroceryService.CANONICAL_WEIGHT,
-            })
+            results.append(
+                {
+                    "ingredient_name": ingredient_name,
+                    "total_quantity": round(canonical_weight.magnitude, 3),
+                    "unit": GroceryService.CANONICAL_WEIGHT,
+                }
+            )
 
         # Counts - group by unit
         if count_quantities:
@@ -339,17 +348,25 @@ class GroceryService:
                 count_by_unit[unit] += item["quantity"]
 
             for unit, total in count_by_unit.items():
-                results.append({
-                    "ingredient_name": ingredient_name,
-                    "total_quantity": round(total, 3),
-                    "unit": unit,
-                })
+                results.append(
+                    {
+                        "ingredient_name": ingredient_name,
+                        "total_quantity": round(total, 3),
+                        "unit": unit,
+                    }
+                )
 
-        return results if results else [{
-            "ingredient_name": ingredient_name,
-            "total_quantity": 0,
-            "unit": "item",
-        }]
+        return (
+            results
+            if results
+            else [
+                {
+                    "ingredient_name": ingredient_name,
+                    "total_quantity": 0,
+                    "unit": "item",
+                }
+            ]
+        )
 
     @staticmethod
     async def _get_existing_list(
