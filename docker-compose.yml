@@ -34,7 +34,6 @@ services:
       - ENABLE_DEBUGPY=${ENABLE_DEBUGPY:-false}
     volumes:
       - ./backend:/app
-      - /var/run/docker.sock:/var/run/docker.sock  # Docker socket for backup/restore
     depends_on:
       postgres:
         condition: service_healthy
