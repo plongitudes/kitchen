@@ -265,6 +265,23 @@ docker ps
 curl http://localhost:8000/health
 ```
 
+## Upgrading
+
+To upgrade to a newer version:
+
+```bash
+# 1. ALWAYS backup first
+docker exec roanes-kitchen-postgres pg_dump -U admin roanes_kitchen > backup.sql
+
+# 2. Pull new version
+docker-compose -f docker-compose.prod.yml pull
+
+# 3. Restart services (migrations run automatically)
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+**Important**: Always read the [Upgrade Guide](docs/UPGRADE.md) before upgrading, especially for major versions.
+
 ## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
