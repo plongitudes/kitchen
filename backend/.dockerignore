@@ -1,0 +1,42 @@
+# Git
+.git
+.gitignore
+
+# Python cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Virtual environments
+.venv
+venv/
+env/
+
+# Environment files
+.env
+.env.*
+
+# Test files and coverage
+tests/
+test_*.py
+*_test.py
+*.md
+htmlcov/
+.coverage
+coverage.xml
+
+# Alembic (we need it, but not the pycache)
+alembic/__pycache__
+
+# Development scripts
+debug_server.py
+restore_db.sh
+# NOTE: restore_db_internal.sh still referenced in Dockerfile - will be removed in rk-jdl
+# scripts/ - keep for now
+
+# Documentation
+README.md
