@@ -35,8 +35,7 @@ alembic/__pycache__
 # Development scripts
 debug_server.py
 restore_db.sh
-# NOTE: restore_db_internal.sh still referenced in Dockerfile - will be removed in rk-jdl
-# scripts/ - keep for now
+restore_db_internal.sh
 
 # Documentation
 README.md
