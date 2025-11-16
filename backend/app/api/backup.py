@@ -93,8 +93,7 @@ async def restore_backup(
     WARNING: This will drop and recreate the entire database,
     disconnecting all active connections. Users should reload the page after restore.
 
-    Runs restore commands directly in the postgres container to avoid
-    backend connection conflicts.
+    Uses direct psql commands to postgres over the Docker network.
     """
     filepath = BACKUP_DIR / filename
 
@@ -103,51 +102,80 @@ async def restore_backup(
             status_code=status.HTTP_404_NOT_FOUND, detail="Backup file not found"
         )
 
+    # Environment for PostgreSQL commands
+    pg_env = {**os.environ, "PGPASSWORD": "admin"}
+
     try:
-        # Copy backup file to postgres container
-        copy_result = subprocess.run(
-            ["docker", "cp", str(filepath), "roanes-kitchen-postgres:/tmp/restore.sql"],
+        # Step 1: Terminate active connections
+        terminate_result = subprocess.run(
+            [
+                "psql",
+                "-h", "postgres",
+                "-U", "admin",
+                "-d", "postgres",
+                "-c",
+                "SELECT pg_terminate_backend(pg_stat_activity.pid) "
+                "FROM pg_stat_activity "
+                "WHERE pg_stat_activity.datname = 'roanes_kitchen' "
+                "AND pid <> pg_backend_pid();"
+            ],
+            env=pg_env,
+            capture_output=True,
+            text=True,
+        )
+        # Ignore errors here - might have no connections to terminate
+
+        # Step 2: Drop database
+        drop_result = subprocess.run(
+            [
+                "psql",
+                "-h", "postgres",
+                "-U", "admin",
+                "-d", "postgres",
+                "-c", "DROP DATABASE IF EXISTS roanes_kitchen;"
+            ],
+            env=pg_env,
             capture_output=True,
             text=True,
         )
 
-        if copy_result.returncode != 0:
-            raise Exception(
-                f"Failed to copy backup to postgres container: {copy_result.stderr}"
-            )
+        if drop_result.returncode != 0:
+            raise Exception(f"Failed to drop database: {drop_result.stderr}")
 
-        # Run restore commands in postgres container to avoid backend connection issues
-        restore_cmd = """
-        export PGPASSWORD=admin
+        # Step 3: Create database
+        create_result = subprocess.run(
+            [
+                "psql",
+                "-h", "postgres",
+                "-U", "admin",
+                "-d", "postgres",
+                "-c", "CREATE DATABASE roanes_kitchen;"
+            ],
+            env=pg_env,
+            capture_output=True,
+            text=True,
+        )
 
-        echo 'Step 1: Terminating connections...'
-        psql -U admin -d postgres -c "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = 'roanes_kitchen' AND pid <> pg_backend_pid();" 2>/dev/null || true
+        if create_result.returncode != 0:
+            raise Exception(f"Failed to create database: {create_result.stderr}")
 
-        echo 'Step 2: Dropping database...'
-        psql -U admin -d postgres -c "DROP DATABASE IF EXISTS roanes_kitchen;"
-
-        echo 'Step 3: Creating database...'
-        psql -U admin -d postgres -c "CREATE DATABASE roanes_kitchen;"
-
-        echo 'Step 4: Restoring from backup...'
-        psql -U admin -d roanes_kitchen -f /tmp/restore.sql
-
-        rm -f /tmp/restore.sql
-        echo 'Restore completed!'
-        """
-
-        result = subprocess.run(
-            ["docker", "exec", "roanes-kitchen-postgres", "bash", "-c", restore_cmd],
+        # Step 4: Restore from backup file
+        restore_result = subprocess.run(
+            [
+                "psql",
+                "-h", "postgres",
+                "-U", "admin",
+                "-d", "roanes_kitchen",
+                "-f", str(filepath)
+            ],
+            env=pg_env,
             capture_output=True,
             text=True,
             timeout=300,  # 5 minute timeout
         )
 
-        if result.returncode != 0:
-            error_msg = (
-                f"Restore failed.\nStdout: {result.stdout}\nStderr: {result.stderr}"
-            )
-            raise Exception(error_msg)
+        if restore_result.returncode != 0:
+            raise Exception(f"Failed to restore from backup: {restore_result.stderr}")
 
         return {
             "message": "Database restored successfully. Please reload the page to reconnect.",
