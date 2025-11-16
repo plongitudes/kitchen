@@ -1,36 +1,48 @@
+# Stage 1: Builder - compile dependencies
+FROM python:3.11-slim AS builder
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and build wheels
+COPY requirements.txt .
+RUN pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
+
+# Stage 2: Runtime - minimal production image
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies including Docker CLI for backup/restore
+# Install only runtime system dependencies
 RUN apt-get update && apt-get install -y \
-    gcc \
     postgresql-client \
     netcat-traditional \
-    ca-certificates \
-    curl \
-    && install -m 0755 -d /etc/apt/keyrings \
-    && curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc \
-    && chmod a+r /etc/apt/keyrings/docker.asc \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian bookworm stable" > /etc/apt/sources.list.d/docker.list \
-    && apt-get update \
-    && apt-get install -y docker-ce-cli \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Create non-root user
+RUN useradd -m -u 1000 appuser && \
+    chown -R appuser:appuser /app
+
+# Copy pre-built wheels from builder stage and install
+COPY --from=builder /wheels /wheels
+RUN pip install --no-cache /wheels/* && \
+    rm -rf /wheels
+
+# Copy entrypoint script
+COPY --chown=appuser:appuser entrypoint.sh /entrypoint.sh
 
 # Copy application code
-COPY . .
+COPY --chown=appuser:appuser . .
 
-# Copy and make entrypoint script executable
-COPY entrypoint.sh /entrypoint.sh
+# Make entrypoint executable
 RUN chmod +x /entrypoint.sh
 
-# Copy and make restore script executable
-COPY restore_db_internal.sh /app/restore_db_internal.sh
-RUN chmod +x /app/restore_db_internal.sh
+# Switch to non-root user
+USER appuser
 
 # Expose port
 EXPOSE 8000
