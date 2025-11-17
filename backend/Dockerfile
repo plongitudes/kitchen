@@ -1,5 +1,5 @@
 # Stage 1: Builder - compile dependencies
-FROM python:3.11-slim AS builder
+FROM python:3.11.10-slim AS builder
 
 WORKDIR /build
 
@@ -13,7 +13,7 @@ COPY requirements.txt .
 RUN pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
 
 # Stage 2: Runtime - minimal production image
-FROM python:3.11-slim
+FROM python:3.11.10-slim
 
 WORKDIR /app
 
