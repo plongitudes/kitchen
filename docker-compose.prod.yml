@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:15-alpine
+    image: postgres:15.10-alpine
     container_name: roanes-kitchen-postgres
     restart: unless-stopped
     environment:
@@ -74,7 +74,7 @@ services:
       - roanes-network
 
   backup:
-    image: postgres:15-alpine
+    image: postgres:15.10-alpine
     container_name: roanes-kitchen-backup
     restart: unless-stopped
     environment:
