@@ -21,11 +21,11 @@ coverage
 README.md
 *.md
 
-# Development files
+# Development files (keep build configs for Docker build!)
 .eslintrc.*
 eslint.config.js
-postcss.config.js
-tailwind.config.js
-vite.config.ts
+# postcss.config.js - NEEDED for build
+# tailwind.config.js - NEEDED for build
+# vite.config.js - NEEDED for build
 tsconfig.json
 tsconfig.node.json
