@@ -237,6 +237,9 @@ async def get_grocery_list(
             detail="Grocery list not found",
         )
 
+    # Enrich items with recipe names
+    await GroceryService.enrich_items_with_recipe_names(db=db, grocery_list=grocery_list)
+
     return grocery_list
 
 

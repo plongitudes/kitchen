@@ -96,6 +96,7 @@ class GroceryListItem(Base):
     total_quantity = Column(Float, nullable=False)
     unit = Column(String, nullable=False)
     source_recipe_ids = Column(Text, nullable=False)  # JSON array of recipe IDs
+    source_recipe_details = Column(Text, nullable=True)  # JSON array of recipe contributions
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships
