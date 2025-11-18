@@ -118,6 +118,14 @@ class AdvanceWeekResponse(BaseModel):
 # ============================================================================
 
 
+class RecipeContribution(BaseModel):
+    """Individual recipe's contribution to a grocery list item."""
+    recipe_id: str
+    recipe_name: Optional[str] = None
+    quantity: float
+    unit: str
+
+
 class GroceryListItemResponse(BaseModel):
     """Schema for grocery list item response."""
 
@@ -126,10 +134,25 @@ class GroceryListItemResponse(BaseModel):
     total_quantity: float
     unit: str
     source_recipe_ids: List[str]  # JSON string from DB, parsed into list
+    source_recipe_names: Optional[List[str]] = None  # Recipe names for display
+    source_recipe_details: Optional[List[RecipeContribution]] = None  # Detailed contributions
+
+    # Display-friendly quantities
+    display_quantity: Optional[str] = None  # e.g., "1¼ cups"
+    metric_equivalent: Optional[str] = None  # e.g., "300g"
+    imperial_equivalent: Optional[str] = None  # e.g., "1¼ cups"
 
     @field_validator("source_recipe_ids", mode="before")
     @classmethod
     def parse_json_string(_cls, v):
+        """Parse JSON string from database."""
+        if isinstance(v, str):
+            return json.loads(v)
+        return v
+
+    @field_validator("source_recipe_details", mode="before")
+    @classmethod
+    def parse_recipe_details(_cls, v):
         """Parse JSON string from database."""
         if isinstance(v, str):
             return json.loads(v)

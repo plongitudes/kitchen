@@ -152,24 +152,68 @@ const GroceryListDetail = () => {
                   <ul className="space-y-3">
                     {groupedItems[category].map((item) => (
                       <li key={item.id} className="flex flex-col gap-1">
-                        <div className="flex items-baseline gap-3">
-                          <span className={`text-lg font-semibold ${
-                            isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'
-                          }`}>
-                            {formatGroceryItem(item.total_quantity, item.unit)}
-                          </span>
+                        <div className="flex items-baseline gap-3 flex-wrap">
+                          {/* Shopping amount - primary, larger text (skip if 0 item) */}
+                          {(item.total_quantity === 0 && item.unit === 'item') ? null : (
+                            (item.metric_equivalent || item.imperial_equivalent) ? (
+                              <span className={`text-xl font-bold whitespace-nowrap ${
+                                isDark ? 'text-gruvbox-dark-orange-bright' : 'text-gruvbox-light-orange-bright'
+                              }`}>
+                                {item.metric_equivalent && item.imperial_equivalent
+                                  ? `${item.metric_equivalent} / ${item.imperial_equivalent}`
+                                  : (item.metric_equivalent || item.imperial_equivalent)
+                                }
+                              </span>
+                            ) : (
+                              <span className={`text-xl font-bold whitespace-nowrap ${
+                                isDark ? 'text-gruvbox-dark-orange-bright' : 'text-gruvbox-light-orange-bright'
+                              }`}>
+                                {item.display_quantity || formatGroceryItem(item.total_quantity, item.unit)}
+                              </span>
+                            )
+                          )}
                           <span className={`text-lg ${
                             isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'
                           }`}>
                             {item.ingredient_name}
                           </span>
                         </div>
-                        {item.source_recipe_ids && item.source_recipe_ids.length > 0 && (
+                        {/* Recipe breakdown - show individual recipe contributions */}
+                        {item.source_recipe_details && item.source_recipe_details.length > 0 ? (
                           <div className={`text-sm ml-6 ${
                             isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'
                           }`}>
-                            Used in {item.source_recipe_ids.length} recipe{item.source_recipe_ids.length !== 1 ? 's' : ''}
+                            Recipe calls for:
+                            <ul className="ml-4 mt-1">
+                              {item.source_recipe_details.map((detail, idx) => (
+                                <li key={idx}>
+                                  {detail.quantity ? (
+                                    <>• {detail.quantity}{detail.unit ? ` ${detail.unit}` : ''} ({detail.recipe_name || 'Unknown Recipe'})</>
+                                  ) : (
+                                    <>• amount not specified ({detail.recipe_name || 'Unknown Recipe'})</>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
                           </div>
+                        ) : (
+                          <>
+                            {/* Fallback to old display if no recipe details */}
+                            {(item.metric_equivalent || item.imperial_equivalent) && item.display_quantity && item.display_quantity !== '0 item' && (
+                              <div className={`text-sm ml-6 ${
+                                isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'
+                              }`}>
+                                Recipe calls for: {item.display_quantity}
+                              </div>
+                            )}
+                            {item.source_recipe_names && item.source_recipe_names.length > 0 && (
+                              <div className={`text-sm ml-6 ${
+                                isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'
+                              }`}>
+                                Used in: {item.source_recipe_names.join(', ')}
+                              </div>
+                            )}
+                          </>
                         )}
                       </li>
                     ))}

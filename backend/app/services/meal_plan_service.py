@@ -430,8 +430,10 @@ class MealPlanService:
             )
 
         # Calculate instance start date (most recent Sunday or today if today is Sunday)
+        # Note: Python's weekday() returns 0=Monday, 6=Sunday
+        # We need to convert to our 0=Sunday convention
         today = date.today()
-        days_since_sunday = today.weekday() + 1 if today.weekday() != 6 else 0
+        days_since_sunday = (today.weekday() + 1) % 7
         instance_start_date = today - timedelta(days=days_since_sunday)
 
         # Check if there's an existing instance for this sequence for the current week
