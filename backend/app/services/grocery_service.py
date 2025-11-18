@@ -109,6 +109,7 @@ class GroceryService:
                 total_quantity=item_data["total_quantity"],
                 unit=item_data["unit"],
                 source_recipe_ids=json.dumps(item_data["source_recipe_ids"]),
+                source_recipe_details=json.dumps(item_data.get("source_recipe_details", [])),
             )
             db.add(item)
 
@@ -266,12 +267,62 @@ class GroceryService:
 
         Returns list of dicts (may be multiple if different dimensionalities).
         """
+        # Collect recipe contribution details (preserve original units from each recipe)
+        source_recipe_details = [
+            {
+                "recipe_id": str(ing.recipe_id),
+                "quantity": ing.quantity,
+                "unit": ing.unit or "",
+            }
+            for ing in ingredients
+            if ing.quantity is not None
+        ]
+
+        # Check if all ingredients use the same unit (case-insensitive)
+        # If so, preserve that unit instead of converting to canonical
+        units_with_quantities = [
+            (ing.unit, ing.quantity)
+            for ing in ingredients
+            if ing.unit and ing.quantity is not None
+        ]
+
+        if units_with_quantities:
+            unique_units = set(u.lower().strip() for u, _ in units_with_quantities)
+            if len(unique_units) == 1:
+                # All same unit - preserve it, just sum quantities
+                preserved_unit = units_with_quantities[0][0]  # Original case
+                total_quantity = sum(q for _, q in units_with_quantities)
+
+                return [
+                    {
+                        "ingredient_name": ingredient_name,
+                        "total_quantity": total_quantity,
+                        "unit": preserved_unit,
+                        "source_recipe_details": source_recipe_details,
+                    }
+                ]
+
+        # Mixed units or no units - use Pint conversion to canonical units
         # Separate by dimensionality
         volume_quantities = []
         weight_quantities = []
         count_quantities = []
 
         for ing in ingredients:
+            # Skip ingredients with no quantity
+            if ing.quantity is None:
+                continue
+
+            # Handle missing unit (treat as count)
+            if not ing.unit:
+                count_quantities.append(
+                    {
+                        "quantity": ing.quantity,
+                        "unit": "",  # No unit
+                    }
+                )
+                continue
+
             unit = ing.unit.lower().strip()
             quantity = ing.quantity
 
@@ -323,6 +374,7 @@ class GroceryService:
                     "ingredient_name": ingredient_name,
                     "total_quantity": round(canonical_volume.magnitude, 3),
                     "unit": GroceryService.CANONICAL_VOLUME,
+                    "source_recipe_details": source_recipe_details,
                 }
             )
 
@@ -335,6 +387,7 @@ class GroceryService:
                     "ingredient_name": ingredient_name,
                     "total_quantity": round(canonical_weight.magnitude, 3),
                     "unit": GroceryService.CANONICAL_WEIGHT,
+                    "source_recipe_details": source_recipe_details,
                 }
             )
 
@@ -353,6 +406,7 @@ class GroceryService:
                         "ingredient_name": ingredient_name,
                         "total_quantity": round(total, 3),
                         "unit": unit,
+                        "source_recipe_details": source_recipe_details,
                     }
                 )
 
@@ -364,6 +418,7 @@ class GroceryService:
                     "ingredient_name": ingredient_name,
                     "total_quantity": 0,
                     "unit": "item",
+                    "source_recipe_details": source_recipe_details,
                 }
             ]
         )
@@ -417,3 +472,196 @@ class GroceryService:
         )
         result = await db.execute(query)
         return result.scalar_one_or_none()
+
+    @staticmethod
+    async def enrich_items_with_recipe_names(
+        db: AsyncSession,
+        grocery_list: GroceryList,
+    ) -> None:
+        """Enrich grocery list items with recipe names."""
+        import json
+        from uuid import UUID
+
+        # Collect all unique recipe IDs
+        recipe_ids = set()
+        for item in grocery_list.items:
+            if item.source_recipe_ids:
+                ids = json.loads(item.source_recipe_ids) if isinstance(item.source_recipe_ids, str) else item.source_recipe_ids
+                recipe_ids.update(UUID(rid) for rid in ids)
+
+        if not recipe_ids:
+            return
+
+        # Fetch all recipes in one query
+        recipe_query = select(Recipe).where(Recipe.id.in_(recipe_ids))
+        result = await db.execute(recipe_query)
+        recipes = result.scalars().all()
+        recipe_map = {str(r.id): r.name for r in recipes}
+
+        # Add recipe names and display quantities to each item
+        for item in grocery_list.items:
+            if item.source_recipe_ids:
+                ids = json.loads(item.source_recipe_ids) if isinstance(item.source_recipe_ids, str) else item.source_recipe_ids
+                item.source_recipe_names = [recipe_map.get(rid, "Unknown Recipe") for rid in ids]
+
+            # Enrich source_recipe_details with recipe names
+            if item.source_recipe_details:
+                details = json.loads(item.source_recipe_details) if isinstance(item.source_recipe_details, str) else item.source_recipe_details
+                for detail in details:
+                    detail["recipe_name"] = recipe_map.get(detail["recipe_id"], "Unknown Recipe")
+                # Re-serialize back to JSON (will be parsed by Pydantic validator in schema)
+                item.source_recipe_details = json.dumps(details)
+
+            # Add display-friendly quantities
+            display_data = GroceryService._get_display_quantities(
+                item.total_quantity, item.unit
+            )
+            item.display_quantity = display_data["display"]
+            item.metric_equivalent = display_data["metric"]
+            item.imperial_equivalent = display_data["imperial"]
+
+    @staticmethod
+    def _decimal_to_fraction(decimal: float, tolerance: float = 0.01) -> tuple:
+        """Convert decimal to nearest common fraction.
+
+        Returns (whole, numerator, denominator) tuple.
+        """
+        from fractions import Fraction
+
+        # Common cooking fractions
+        common_fractions = [
+            (1, 8), (1, 6), (1, 4), (1, 3), (1, 2),
+            (2, 3), (3, 4), (5, 6), (7, 8)
+        ]
+
+        whole = int(decimal)
+        remainder = decimal - whole
+
+        if remainder < tolerance:
+            return (whole, 0, 1)
+        if remainder > (1 - tolerance):
+            return (whole + 1, 0, 1)
+
+        # Find closest common fraction
+        best_match = None
+        best_diff = float('inf')
+
+        for num, denom in common_fractions:
+            frac_val = num / denom
+            diff = abs(remainder - frac_val)
+            if diff < best_diff:
+                best_diff = diff
+                best_match = (num, denom)
+
+        if best_diff < tolerance:
+            return (whole, best_match[0], best_match[1])
+
+        # Fallback to Fraction library for uncommon fractions
+        frac = Fraction(remainder).limit_denominator(8)
+        return (whole, frac.numerator, frac.denominator)
+
+    @staticmethod
+    def _format_quantity(whole: int, num: int, denom: int) -> str:
+        """Format quantity with unicode fractions."""
+        # Unicode fraction characters
+        fractions_map = {
+            (1, 8): "⅛", (1, 6): "⅙", (1, 4): "¼", (1, 3): "⅓", (1, 2): "½",
+            (2, 3): "⅔", (3, 4): "¾", (5, 6): "⅚", (7, 8): "⅞",
+            (1, 5): "⅕", (2, 5): "⅖", (3, 5): "⅗", (4, 5): "⅘"
+        }
+
+        if num == 0:
+            return str(whole) if whole > 0 else "0"
+
+        frac_str = fractions_map.get((num, denom), f"{num}/{denom}")
+
+        if whole > 0:
+            return f"{whole} {frac_str}"
+        return frac_str
+
+    @staticmethod
+    def _get_display_quantities(quantity: float, unit: str) -> dict:
+        """Generate display-friendly quantity representations.
+
+        Returns dict with 'display', 'metric', and 'imperial' keys.
+        """
+        if not unit:
+            # No unit items - no buffer, no conversions, just show count
+            return {
+                "display": str(int(quantity)) if quantity == int(quantity) else f"{quantity:.1f}",
+                "metric": None,
+                "imperial": None
+            }
+
+        unit_lower = unit.lower().strip()
+
+        # Recipe amount (exact, with fractions for display)
+        recipe_whole, recipe_num, recipe_denom = GroceryService._decimal_to_fraction(quantity)
+        recipe_str = GroceryService._format_quantity(recipe_whole, recipe_num, recipe_denom)
+
+        # Generate metric and imperial equivalents for shopping amount
+        # Convert to grocery units FIRST, then round up
+        import math
+        metric_str = None
+        imperial_str = None
+
+        try:
+            # Try Pint conversion for common units (use exact quantity, not rounded)
+            pint_qty = ureg.Quantity(quantity, unit_lower)
+
+            # Determine if it's metric or imperial
+            if pint_qty.dimensionality == ureg.liter.dimensionality:
+                # Volume - convert to grocery units (fl oz / ml)
+                metric_qty = pint_qty.to("milliliter")
+                imperial_qty = pint_qty.to("fluid_ounce")
+
+                # Metric: use decimals, round to reasonable precision
+                ml_val = metric_qty.magnitude
+                if ml_val < 1000:
+                    # Round to nearest 5ml for small quantities
+                    metric_str = f"{int(math.ceil(ml_val / 5) * 5)}ml"
+                else:
+                    # Use liters for large quantities
+                    l_val = metric_qty.to('liter').magnitude
+                    metric_str = f"{math.ceil(l_val * 10) / 10:.1f}L"
+
+                # Imperial: fluid ounces (round up to whole numbers)
+                fl_oz = int(math.ceil(imperial_qty.magnitude))
+                imperial_str = f"{fl_oz} fl oz"
+
+            elif pint_qty.dimensionality == ureg.gram.dimensionality:
+                # Weight - convert to grocery units (oz/lbs / g/kg)
+                metric_qty = pint_qty.to("gram")
+                imperial_qty = pint_qty.to("ounce")
+
+                # Metric: use decimals, round to reasonable precision
+                g_val = metric_qty.magnitude
+                if g_val < 1000:
+                    # Round to nearest 5g for quantities under 1kg
+                    metric_str = f"{int(math.ceil(g_val / 5) * 5)}g"
+                else:
+                    # Use kg for large quantities
+                    kg_val = metric_qty.to('kilogram').magnitude
+                    metric_str = f"{math.ceil(kg_val * 10) / 10:.1f}kg"
+
+                # Imperial: oz or lbs depending on size
+                oz_val = imperial_qty.magnitude
+                if oz_val >= 16:
+                    # Convert to pounds for large quantities
+                    lbs = math.ceil(oz_val / 16)
+                    imperial_str = f"{lbs} lbs"
+                else:
+                    # Use ounces for smaller quantities (round up)
+                    imperial_str = f"{int(math.ceil(oz_val))} oz"
+        except:
+            # If conversion fails, use original unit (only set metric, leave imperial None)
+            # This prevents duplicate display like "1 bunch / 1 bunch"
+            rounded_qty = int(math.ceil(quantity))
+            metric_str = f"{rounded_qty} {unit}"
+            imperial_str = None
+
+        return {
+            "display": f"{recipe_str} {unit}",  # Recipe amount (exact)
+            "metric": metric_str,  # Shopping amount in metric
+            "imperial": imperial_str  # Shopping amount in imperial
+        }

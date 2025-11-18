@@ -17,6 +17,7 @@ import TemplateEdit from './pages/TemplateEdit';
 import TemplateDetail from './pages/TemplateDetail';
 import MealPlanCurrent from './pages/MealPlanCurrent';
 import MealPlanList from './pages/MealPlanList';
+import MealPlanDetail from './pages/MealPlanDetail';
 import GroceryListAll from './pages/GroceryListAll';
 import GroceryListDetail from './pages/GroceryListDetail';
 import Settings from './pages/Settings';
@@ -64,7 +65,7 @@ function App() {
               <Route path="templates/:id/edit" element={<TemplateEdit />} />
               <Route path="templates/:id" element={<TemplateDetail />} />
               <Route path="meal-plans/current" element={<MealPlanCurrent />} />
-              <Route path="meal-plans/:id" element={<MealPlanList />} />
+              <Route path="meal-plans/:id" element={<MealPlanDetail />} />
               <Route path="meal-plans" element={<MealPlanList />} />
               <Route path="grocery-lists/:id" element={<GroceryListDetail />} />
               <Route path="grocery-lists" element={<GroceryListAll />} />

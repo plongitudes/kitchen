@@ -230,7 +230,9 @@ const MealPlanCurrent = () => {
           {sortedDates.map(date => {
             const assignments = assignmentsByDate[date];
             const dayAssignment = assignments[0];
-            const dateObj = new Date(date);
+            // Parse date as local time to avoid timezone shifts
+            const [year, month, day] = date.split('-').map(Number);
+            const dateObj = new Date(year, month - 1, day);
             const dayName = dayNames[dateObj.getDay()];
             const isToday = new Date().toDateString() === dateObj.toDateString();
 
