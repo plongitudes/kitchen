@@ -51,6 +51,7 @@ class TestRecipeBasicOperations:
                         "quantity": 1,
                         "unit": "cup",
                         "order": 3,
+                        "prep_note": "finely grated",
                     },
                 ],
                 "instructions": [
@@ -92,6 +93,9 @@ class TestRecipeBasicOperations:
         assert data["ingredients"][0]["ingredient_name"] == "Spaghetti"
         assert data["ingredients"][0]["quantity"] == 1
         assert data["ingredients"][0]["unit"] == "pound"
+        # Verify prep_note is present on Parmesan
+        assert data["ingredients"][2]["ingredient_name"] == "Parmesan"
+        assert data["ingredients"][2]["prep_note"] == "finely grated"
 
         # Verify instructions
         assert len(data["instructions"]) == 3
@@ -412,6 +416,7 @@ class TestRecipeIngredients:
                 "quantity": 3,
                 "unit": "teaspoon",
                 "order": 3,
+                "prep_note": "finely chopped",
             },
         )
 
@@ -420,6 +425,7 @@ class TestRecipeIngredients:
         assert data["ingredient_name"] == "New Ingredient"
         assert data["quantity"] == 3
         assert data["unit"] == "teaspoon"
+        assert data["prep_note"] == "finely chopped"
 
         # Verify it appears in the list
         list_response = async_authenticated_client.get(
@@ -442,6 +448,7 @@ class TestRecipeIngredients:
             json={
                 "quantity": 2.5,
                 "unit": "ounce",
+                "prep_note": "diced into 1-inch cubes",
             },
         )
 
@@ -449,6 +456,7 @@ class TestRecipeIngredients:
         data = response.json()
         assert data["quantity"] == 2.5
         assert data["unit"] == "ounce"
+        assert data["prep_note"] == "diced into 1-inch cubes"
         # Name should remain unchanged
         assert data["ingredient_name"] == "Ingredient 1"
 

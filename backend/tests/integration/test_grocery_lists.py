@@ -429,3 +429,352 @@ class TestGroceryListGeneration:
         assert len(milk_items) == 1
         assert milk_items[0]["total_quantity"] == 2.0
         assert milk_items[0]["unit"] == "cup"
+
+    def test_source_recipe_details_populated(
+        self,
+        async_authenticated_client: TestClient,
+        meal_plan_with_recipes: dict,
+    ):
+        """Test that source_recipe_details contains original recipe quantities and units."""
+        instance_id = meal_plan_with_recipes["instance_id"]
+        start_date = meal_plan_with_recipes["start_date"]
+        recipe1 = meal_plan_with_recipes["recipe1"]
+        recipe2 = meal_plan_with_recipes["recipe2"]
+
+        # Generate grocery list
+        response = async_authenticated_client.post(
+            f"/meal-plans/{instance_id}/grocery-lists/generate",
+            json={"shopping_date": start_date.isoformat()},
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        items_by_name = {item["ingredient_name"].lower(): item for item in data["items"]}
+
+        # Check pasta has source_recipe_details from both recipes
+        pasta_item = items_by_name["pasta"]
+        assert "source_recipe_details" in pasta_item
+        assert pasta_item["source_recipe_details"] is not None
+        details = pasta_item["source_recipe_details"]
+        assert len(details) == 2
+
+        # Verify details contain original quantities and units
+        recipe1_detail = next(d for d in details if d["recipe_id"] == recipe1["id"])
+        assert recipe1_detail["quantity"] == 1
+        assert recipe1_detail["unit"] == "pound"
+        assert recipe1_detail["recipe_name"] == "Pasta Carbonara"
+
+        recipe2_detail = next(d for d in details if d["recipe_id"] == recipe2["id"])
+        assert recipe2_detail["quantity"] == 500
+        assert recipe2_detail["unit"] == "gram"
+        assert recipe2_detail["recipe_name"] == "Mac and Cheese"
+
+        # Check milk has source_recipe_details from both recipes
+        milk_item = items_by_name["milk"]
+        milk_details = milk_item["source_recipe_details"]
+        assert len(milk_details) == 2
+
+        # Recipe 1 uses cups, Recipe 2 uses fluid_ounce
+        recipe1_milk = next(d for d in milk_details if d["recipe_id"] == recipe1["id"])
+        assert recipe1_milk["quantity"] == 1
+        assert recipe1_milk["unit"] == "cup"
+
+        recipe2_milk = next(d for d in milk_details if d["recipe_id"] == recipe2["id"])
+        assert recipe2_milk["quantity"] == 8
+        assert recipe2_milk["unit"] == "fluid_ounce"
+
+    def test_source_recipe_details_single_recipe(
+        self,
+        async_authenticated_client: TestClient,
+        meal_plan_with_recipes: dict,
+    ):
+        """Test source_recipe_details for ingredients from only one recipe."""
+        instance_id = meal_plan_with_recipes["instance_id"]
+        start_date = meal_plan_with_recipes["start_date"]
+        recipe1 = meal_plan_with_recipes["recipe1"]
+
+        # Generate grocery list
+        response = async_authenticated_client.post(
+            f"/meal-plans/{instance_id}/grocery-lists/generate",
+            json={"shopping_date": start_date.isoformat()},
+        )
+
+        data = response.json()
+        items_by_name = {item["ingredient_name"].lower(): item for item in data["items"]}
+
+        # Eggs only in recipe1
+        eggs_item = items_by_name["eggs"]
+        assert "source_recipe_details" in eggs_item
+        details = eggs_item["source_recipe_details"]
+        assert len(details) == 1
+        assert details[0]["recipe_id"] == recipe1["id"]
+        assert details[0]["quantity"] == 4
+        assert details[0]["unit"] == "whole"
+        assert details[0]["recipe_name"] == "Pasta Carbonara"
+
+    def test_non_convertible_units_single_display(
+        self,
+        async_authenticated_client: TestClient,
+        async_test_user,
+    ):
+        """Test that non-convertible units (like 'bunch') only show once, not duplicated."""
+        # Create recipe with non-convertible unit
+        recipe = async_authenticated_client.post(
+            "/recipes",
+            json={
+                "name": "Stir Fry",
+                "recipe_type": "dinner",
+                "cook_time_minutes": 15,
+                "ingredients": [
+                    {"ingredient_name": "Scallions", "quantity": 1, "unit": "bunch", "order": 1},
+                ],
+                "instructions": [{"step_number": 1, "description": "Chop scallions"}],
+            },
+        ).json()
+
+        # Create schedule and instance
+        sequence = async_authenticated_client.post(
+            "/schedules",
+            json={
+                "name": "Test",
+                "advancement_day_of_week": 0,
+                "advancement_time": "08:00",
+            },
+        ).json()
+
+        template = async_authenticated_client.post(
+            "/templates",
+            json={
+                "name": "Stir Fry Week",
+                "assignments": [
+                    {
+                        "day_of_week": 0,
+                        "assigned_user_id": str(async_test_user.id),
+                        "action": "shop",
+                        "order": 0,
+                    },
+                    {
+                        "day_of_week": 1,
+                        "assigned_user_id": str(async_test_user.id),
+                        "action": "cook",
+                        "recipe_id": recipe["id"],
+                        "order": 0,
+                    },
+                ],
+            },
+        ).json()
+
+        async_authenticated_client.post(
+            f"/schedules/{sequence['id']}/templates",
+            json={"week_template_id": template["id"], "position": 1},
+        )
+
+        instance = async_authenticated_client.post(
+            "/meal-plans/advance-week",
+            json={"sequence_id": sequence["id"]},
+        ).json()["new_instance"]
+
+        # Generate grocery list
+        grocery_list = async_authenticated_client.post(
+            f"/meal-plans/{instance['id']}/grocery-lists/generate",
+            json={"shopping_date": instance["instance_start_date"]},
+        ).json()
+
+        scallions_item = next(
+            item for item in grocery_list["items"]
+            if item["ingredient_name"].lower() == "scallions"
+        )
+
+        # metric_equivalent should be set, imperial_equivalent should be None
+        # Note: The backend may return IngredientUnit.BUNCH enum string
+        assert "bunch" in scallions_item["metric_equivalent"].lower()
+        assert scallions_item["imperial_equivalent"] is None
+
+    def test_zero_quantity_items_handling(
+        self,
+        async_authenticated_client: TestClient,
+        async_test_user,
+    ):
+        """Test that items with zero quantity or no unit are handled gracefully."""
+        # Create recipe with optional ingredient (quantity might be 0 or None)
+        recipe = async_authenticated_client.post(
+            "/recipes",
+            json={
+                "name": "Simple Dish",
+                "recipe_type": "lunch",
+                "cook_time_minutes": 10,
+                "ingredients": [
+                    {"ingredient_name": "Main Ingredient", "quantity": 2, "unit": "cup", "order": 1},
+                ],
+                "instructions": [{"step_number": 1, "description": "Cook"}],
+            },
+        ).json()
+
+        # Create schedule and instance
+        sequence = async_authenticated_client.post(
+            "/schedules",
+            json={
+                "name": "Test",
+                "advancement_day_of_week": 0,
+                "advancement_time": "08:00",
+            },
+        ).json()
+
+        template = async_authenticated_client.post(
+            "/templates",
+            json={
+                "name": "Test Week",
+                "assignments": [
+                    {
+                        "day_of_week": 0,
+                        "assigned_user_id": str(async_test_user.id),
+                        "action": "shop",
+                        "order": 0,
+                    },
+                    {
+                        "day_of_week": 1,
+                        "assigned_user_id": str(async_test_user.id),
+                        "action": "cook",
+                        "recipe_id": recipe["id"],
+                        "order": 0,
+                    },
+                ],
+            },
+        ).json()
+
+        async_authenticated_client.post(
+            f"/schedules/{sequence['id']}/templates",
+            json={"week_template_id": template["id"], "position": 1},
+        )
+
+        instance = async_authenticated_client.post(
+            "/meal-plans/advance-week",
+            json={"sequence_id": sequence["id"]},
+        ).json()["new_instance"]
+
+        # Generate grocery list
+        grocery_list = async_authenticated_client.post(
+            f"/meal-plans/{instance['id']}/grocery-lists/generate",
+            json={"shopping_date": instance["instance_start_date"]},
+        ).json()
+
+        # Verify the item has proper display quantities
+        item = next(
+            item for item in grocery_list["items"]
+            if item["ingredient_name"].lower() == "main ingredient"
+        )
+        assert item["total_quantity"] == 2
+        assert item["unit"] == "cup"
+        assert item["display_quantity"] is not None
+        assert "0 item" not in item["display_quantity"]
+
+    def test_recipe_details_preserved_across_unit_conversions(
+        self,
+        async_authenticated_client: TestClient,
+        async_test_user,
+    ):
+        """Test that original recipe units are preserved even when aggregated quantities differ."""
+        # Create two recipes with same ingredient in different units
+        recipe1 = async_authenticated_client.post(
+            "/recipes",
+            json={
+                "name": "Recipe with Tablespoons",
+                "recipe_type": "dinner",
+                "cook_time_minutes": 20,
+                "ingredients": [
+                    {"ingredient_name": "Soy Sauce", "quantity": 2, "unit": "tablespoon", "order": 1},
+                ],
+                "instructions": [{"step_number": 1, "description": "Mix"}],
+            },
+        ).json()
+
+        recipe2 = async_authenticated_client.post(
+            "/recipes",
+            json={
+                "name": "Recipe with Milliliters",
+                "recipe_type": "dinner",
+                "cook_time_minutes": 20,
+                "ingredients": [
+                    {"ingredient_name": "Soy Sauce", "quantity": 50, "unit": "ml", "order": 1},
+                ],
+                "instructions": [{"step_number": 1, "description": "Pour"}],
+            },
+        ).json()
+
+        # Create schedule and instance
+        sequence = async_authenticated_client.post(
+            "/schedules",
+            json={
+                "name": "Test",
+                "advancement_day_of_week": 0,
+                "advancement_time": "08:00",
+            },
+        ).json()
+
+        template = async_authenticated_client.post(
+            "/templates",
+            json={
+                "name": "Soy Sauce Week",
+                "assignments": [
+                    {
+                        "day_of_week": 0,
+                        "assigned_user_id": str(async_test_user.id),
+                        "action": "shop",
+                        "order": 0,
+                    },
+                    {
+                        "day_of_week": 1,
+                        "assigned_user_id": str(async_test_user.id),
+                        "action": "cook",
+                        "recipe_id": recipe1["id"],
+                        "order": 0,
+                    },
+                    {
+                        "day_of_week": 2,
+                        "assigned_user_id": str(async_test_user.id),
+                        "action": "cook",
+                        "recipe_id": recipe2["id"],
+                        "order": 0,
+                    },
+                ],
+            },
+        ).json()
+
+        async_authenticated_client.post(
+            f"/schedules/{sequence['id']}/templates",
+            json={"week_template_id": template["id"], "position": 1},
+        )
+
+        instance = async_authenticated_client.post(
+            "/meal-plans/advance-week",
+            json={"sequence_id": sequence["id"]},
+        ).json()["new_instance"]
+
+        # Generate grocery list
+        grocery_list = async_authenticated_client.post(
+            f"/meal-plans/{instance['id']}/grocery-lists/generate",
+            json={"shopping_date": instance["instance_start_date"]},
+        ).json()
+
+        soy_sauce_item = next(
+            item for item in grocery_list["items"]
+            if item["ingredient_name"].lower() == "soy sauce"
+        )
+
+        # Aggregated total should be in canonical units
+        assert soy_sauce_item["total_quantity"] > 0
+        assert soy_sauce_item["unit"] in ["cup", "fluid_ounce", "milliliter"]
+
+        # But source_recipe_details should preserve original units
+        details = soy_sauce_item["source_recipe_details"]
+        assert len(details) == 2
+
+        tablespoon_detail = next(d for d in details if d["recipe_id"] == recipe1["id"])
+        assert tablespoon_detail["quantity"] == 2
+        assert tablespoon_detail["unit"] == "tablespoon"
+        assert tablespoon_detail["recipe_name"] == "Recipe with Tablespoons"
+
+        ml_detail = next(d for d in details if d["recipe_id"] == recipe2["id"])
+        assert ml_detail["quantity"] == 50
+        assert ml_detail["unit"] == "ml"
+        assert ml_detail["recipe_name"] == "Recipe with Milliliters"

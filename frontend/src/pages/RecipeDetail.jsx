@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { recipeAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import RetireRecipeModal from '../components/RetireRecipeModal';
+import Toast from '../components/Toast';
 
 const RecipeDetail = () => {
   const { id } = useParams();
@@ -14,6 +15,7 @@ const RecipeDetail = () => {
   const [retireModal, setRetireModal] = useState(false);
   const [reimportModal, setReimportModal] = useState(false);
   const [reimporting, setReimporting] = useState(false);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     fetchRecipe();
@@ -39,7 +41,10 @@ const RecipeDetail = () => {
       navigate('/recipes');
     } catch (err) {
       const errorMsg = err.response?.data?.detail || 'Failed to retire recipe';
-      alert(errorMsg);
+      setToast({
+        message: errorMsg,
+        type: 'error',
+      });
     }
   };
 
@@ -57,7 +62,10 @@ const RecipeDetail = () => {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      alert('Failed to export recipe');
+      setToast({
+        message: 'Failed to export recipe',
+        type: 'error',
+      });
     }
   };
 
@@ -67,10 +75,16 @@ const RecipeDetail = () => {
       const response = await recipeAPI.reimport(id);
       setRecipe(response.data);
       setReimportModal(false);
-      alert('Recipe successfully re-imported from source!');
+      setToast({
+        message: 'Recipe successfully re-imported from source!',
+        type: 'success',
+      });
     } catch (err) {
       const errorMsg = err.response?.data?.detail || 'Failed to re-import recipe';
-      alert(errorMsg);
+      setToast({
+        message: errorMsg,
+        type: 'error',
+      });
     } finally {
       setReimporting(false);
     }
@@ -264,9 +278,16 @@ const RecipeDetail = () => {
               .map((ing) => (
                 <li key={ing.id} className="flex gap-3">
                   <span className={isDark ? 'text-gruvbox-dark-orange' : 'text-gruvbox-light-orange'}>•</span>
-                  <span className={isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'}>
-                    {ing.quantity} {ing.unit} {ing.ingredient_name}
-                  </span>
+                  <div className="flex-1">
+                    <div className={isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'}>
+                      {ing.quantity} {ing.unit} {ing.ingredient_name}
+                    </div>
+                    {ing.prep_note && (
+                      <div className={`text-sm italic ${isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'}`}>
+                        {ing.prep_note}
+                      </div>
+                    )}
+                  </div>
                 </li>
               ))}
           </ul>
@@ -418,6 +439,15 @@ const RecipeDetail = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Toast Notifications */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
     </div>
   );

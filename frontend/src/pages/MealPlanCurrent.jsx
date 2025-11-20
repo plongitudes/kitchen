@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { mealPlanAPI, recipeAPI, authAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import Toast from '../components/Toast';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const MealPlanCurrent = () => {
   const { isDark } = useTheme();
@@ -17,6 +19,8 @@ const MealPlanCurrent = () => {
   const [users, setUsers] = useState([]);
   const [recipes, setRecipes] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState(null);
 
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -64,9 +68,15 @@ const MealPlanCurrent = () => {
       await mealPlanAPI.generateGroceryList(mealPlan.id, date);
       // Reload to show updated grocery list count
       await loadCurrentMealPlan();
-      alert('Grocery list generated successfully!');
+      setToast({
+        message: 'Grocery list generated successfully!',
+        type: 'success',
+      });
     } catch (err) {
-      alert(err.response?.data?.detail || 'Failed to generate grocery list');
+      setToast({
+        message: err.response?.data?.detail || 'Failed to generate grocery list',
+        type: 'error',
+      });
     } finally {
       setGenerating(false);
     }
@@ -119,29 +129,38 @@ const MealPlanCurrent = () => {
       setEditingDate(null);
       setEditForm({ userId: '', action: '', recipeId: '' });
     } catch (err) {
-      alert(err.response?.data?.detail || 'Failed to save assignment');
+      setToast({
+        message: err.response?.data?.detail || 'Failed to save assignment',
+        type: 'error',
+      });
     } finally {
       setSaving(false);
     }
   };
 
   const handleResetToTemplate = async (assignment) => {
-    if (!confirm('Reset this day to the template assignment?')) {
-      return;
-    }
+    setConfirmDialog({
+      message: 'Reset this day to the template assignment?',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          setSaving(true);
 
-    try {
-      setSaving(true);
-
-      if (assignment.is_modified && assignment.id) {
-        await mealPlanAPI.deleteAssignment(mealPlan.id, assignment.id);
-        await loadCurrentMealPlan();
-      }
-    } catch (err) {
-      alert(err.response?.data?.detail || 'Failed to reset assignment');
-    } finally {
-      setSaving(false);
-    }
+          if (assignment.is_modified && assignment.id) {
+            await mealPlanAPI.deleteAssignment(mealPlan.id, assignment.id);
+            await loadCurrentMealPlan();
+          }
+        } catch (err) {
+          setToast({
+            message: err.response?.data?.detail || 'Failed to reset assignment',
+            type: 'error',
+          });
+        } finally {
+          setSaving(false);
+        }
+      },
+      onCancel: () => setConfirmDialog(null),
+    });
   };
 
   const groupAssignmentsByDate = (assignments) => {
@@ -474,6 +493,24 @@ const MealPlanCurrent = () => {
           </Link>
         </div>
       </div>
+
+      {/* Toast Notifications */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {/* Confirm Dialog */}
+      {confirmDialog && (
+        <ConfirmDialog
+          message={confirmDialog.message}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={confirmDialog.onCancel}
+        />
+      )}
     </div>
   );
 };

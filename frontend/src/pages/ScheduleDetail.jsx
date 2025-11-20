@@ -3,6 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { scheduleAPI, mealPlanAPI, templateAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import TemplateFormModal from '../components/TemplateFormModal';
+import Toast from '../components/Toast';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const ScheduleDetail = () => {
   const { id } = useParams();
@@ -18,6 +20,8 @@ const ScheduleDetail = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showStartModal, setShowStartModal] = useState(false);
   const [newlyCreatedTemplateId, setNewlyCreatedTemplateId] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState(null);
 
   const loadScheduleAndTemplates = async () => {
     try {
@@ -82,7 +86,10 @@ const ScheduleDetail = () => {
         position: position,
       });
       setShowStartModal(false);
-      alert('Schedule started! View your current meal plan.');
+      setToast({
+        message: 'Schedule started! View your current meal plan.',
+        type: 'success',
+      });
       navigate(`/meal-plans/current?sequence_id=${id}`);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to start schedule');
@@ -92,16 +99,19 @@ const ScheduleDetail = () => {
   };
 
   const handleRemoveTemplate = async (templateId) => {
-    if (!confirm('Remove this template from the schedule? It will no longer appear in the rotation.')) {
-      return;
-    }
-
-    try {
-      await scheduleAPI.removeTemplate(id, templateId);
-      await loadScheduleAndTemplates();
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to remove template');
-    }
+    setConfirmDialog({
+      message: 'Remove this template from the schedule? It will no longer appear in the rotation.',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          await scheduleAPI.removeTemplate(id, templateId);
+          await loadScheduleAndTemplates();
+        } catch (err) {
+          setError(err.response?.data?.detail || 'Failed to remove template');
+        }
+      },
+      onCancel: () => setConfirmDialog(null),
+    });
   };
 
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -383,6 +393,24 @@ const ScheduleDetail = () => {
           setNewlyCreatedTemplateId(newTemplate.id);
         }}
       />
+
+      {/* Toast Notifications */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {/* Confirm Dialog */}
+      {confirmDialog && (
+        <ConfirmDialog
+          message={confirmDialog.message}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={confirmDialog.onCancel}
+        />
+      )}
     </div>
   );
 
@@ -440,7 +468,10 @@ const ScheduleDetail = () => {
 
     const handleAdd = async () => {
       if (selectedTemplateIds.size === 0) {
-        alert('Please select at least one template');
+        setToast({
+          message: 'Please select at least one template',
+          type: 'error',
+        });
         return;
       }
 
@@ -453,7 +484,10 @@ const ScheduleDetail = () => {
         setShowAddModal(false);
         await loadScheduleAndTemplates();
       } catch (err) {
-        alert(err.response?.data?.detail || 'Failed to add templates');
+        setToast({
+          message: err.response?.data?.detail || 'Failed to add templates',
+          type: 'error',
+        });
       } finally {
         setAdding(false);
       }
@@ -605,7 +639,10 @@ const ScheduleDetail = () => {
 
     const handleStart = async () => {
       if (!selectedWeek) {
-        alert('Please select a week to start with');
+        setToast({
+          message: 'Please select a week to start with',
+          type: 'error',
+        });
         return;
       }
       await handleStartSchedule(selectedWeek.week_template_id, selectedWeek.position);

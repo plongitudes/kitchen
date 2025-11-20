@@ -164,6 +164,9 @@ async def generate_grocery_list(
         shopping_date=request_data.shopping_date,
     )
 
+    # Enrich with recipe names and display quantities
+    await GroceryService.enrich_items_with_recipe_names(db, grocery_list)
+
     # Send Discord notification
     try:
         bot = get_bot()
@@ -173,13 +176,28 @@ async def generate_grocery_list(
         message += f"Shopping Date: {shopping_date}\n"
         message += f"Items: {item_count}\n\n"
 
-        # Add top items
+        # Add all items
         if item_count > 0:
             message += "**Items:**\n"
-            for item in grocery_list.items[:10]:  # Show first 10
-                message += f"- {item.quantity} {item.unit} {item.ingredient_name}\n"
-            if item_count > 10:
-                message += f"... and {item_count - 10} more items"
+            for item in grocery_list.items:
+                # Use formatted display like the frontend
+                if item.total_quantity == 0 and item.unit == 'item':
+                    # No amount specified
+                    amount_str = ""
+                elif item.metric_equivalent and item.imperial_equivalent:
+                    # Both equivalents
+                    amount_str = f"{item.metric_equivalent} / {item.imperial_equivalent} "
+                elif item.metric_equivalent or item.imperial_equivalent:
+                    # Only one equivalent
+                    amount_str = f"{item.metric_equivalent or item.imperial_equivalent} "
+                elif item.display_quantity:
+                    # Use display quantity
+                    amount_str = f"{item.display_quantity} "
+                else:
+                    # Fallback
+                    amount_str = f"{item.total_quantity} {item.unit} "
+
+                message += f"- {amount_str}{item.ingredient_name}\n"
 
         await bot.send_message(message)
     except Exception as e:

@@ -18,6 +18,7 @@ class RecipeIngredientBase(BaseModel):
     quantity: Optional[float] = Field(None, gt=0)
     unit: Optional[IngredientUnit] = None
     order: int = Field(..., ge=0)
+    prep_note: Optional[str] = None
 
     @field_validator("unit", mode="before")
     @classmethod
@@ -48,6 +49,7 @@ class RecipeIngredientUpdate(BaseModel):
     quantity: Optional[float] = Field(None, gt=0)
     unit: Optional[IngredientUnit] = None
     order: Optional[int] = Field(None, ge=0)
+    prep_note: Optional[str] = None
 
     @field_validator("unit", mode="before")
     @classmethod
