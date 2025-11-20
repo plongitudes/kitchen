@@ -15,13 +15,14 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://admin:admin@postgres:5432/roanes_kitchen"
 
     # Security
-    secret_key: str = "dev-secret-key-change-in-production"
+    jwt_secret_key: str = "dev-secret-key-change-in-production"
     algorithm: str = "HS256"
     access_token_expire_days: int = 7
 
-    # Discord Bot (Development only - ignored in production)
+    # Discord Bot (Optional - for meal plan notifications)
     discord_bot_token: Optional[str] = None
-    discord_channel_id: Optional[str] = None
+    discord_notification_channel_id: Optional[str] = None
+    discord_test_channel_id: Optional[str] = None
 
     class Config:
         env_file = ".env"
