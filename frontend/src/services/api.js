@@ -108,3 +108,29 @@ export const mealPlanAPI = {
   updateAssignment: (instanceId, assignmentId, data) => api.put(`/meal-plans/${instanceId}/assignments/${assignmentId}`, data),
   deleteAssignment: (instanceId, assignmentId) => api.delete(`/meal-plans/${instanceId}/assignments/${assignmentId}`),
 };
+
+// Ingredient API
+export const ingredientAPI = {
+  listIngredients: (search, category) => {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (category) params.append('category', category);
+    return api.get(`/ingredients?${params.toString()}`);
+  },
+  getIngredient: (id) => api.get(`/ingredients/${id}`),
+  createIngredient: (data) => api.post('/ingredients', data),
+  updateIngredient: (id, data) => api.put(`/ingredients/${id}`, data),
+  deleteIngredient: (id) => api.delete(`/ingredients/${id}`),
+  deleteAlias: (ingredientId, aliasId) => api.delete(`/ingredients/${ingredientId}/aliases/${aliasId}`),
+  listUnmapped: () => api.get('/ingredients/unmapped'),
+  getRecipesForUnmapped: (ingredientName) =>
+    api.get(`/ingredients/unmapped/${encodeURIComponent(ingredientName)}/recipes`),
+  mapIngredient: (ingredientName, commonIngredientId) =>
+    api.post('/ingredients/map', { ingredient_name: ingredientName, common_ingredient_id: commonIngredientId }),
+  createWithMapping: (name, category, initialAlias) =>
+    api.post('/ingredients/create-with-mapping', { name, category, initial_alias: initialAlias }),
+  mergeIngredients: (sourceIds, targetId) =>
+    api.post('/ingredients/merge', { source_ingredient_ids: sourceIds, target_ingredient_id: targetId }),
+  autoMapCommon: (minRecipeCount = 2) =>
+    api.post(`/ingredients/auto-map?min_recipe_count=${minRecipeCount}`),
+};

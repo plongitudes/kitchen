@@ -1,14 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { recipeAPI } from '../services/api';
+import Toast from './Toast';
 
 const RecipeForm = ({ recipeId = null, initialData = null }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const [reimportModal, setReimportModal] = useState(false);
   const [reimporting, setReimporting] = useState(false);
+  const [toast, setToast] = useState(null);
   const ingredientRefs = useRef([]);
   const instructionRefs = useRef([]);
 
@@ -86,7 +89,15 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
         await recipeAPI.create(payload);
       }
 
-      navigate('/recipes');
+      // Navigate to returnTo location if provided, otherwise default to /recipes
+      if (location.state?.returnTo) {
+        // If we have returnTo, preserve the tab state
+        navigate(location.state.returnTo, {
+          state: { tab: location.state.tab }
+        });
+      } else {
+        navigate('/recipes');
+      }
     } catch (err) {
       let errorMessage = 'Failed to save recipe';
       if (err.response?.data?.detail) {
@@ -124,7 +135,10 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
         source_url: formData.source_url,
       });
       setError(null);
-      alert('Recipe successfully re-imported from source! Your recipe_type, prep_notes, and postmortem_notes have been preserved.');
+      setToast({
+        message: 'Recipe successfully re-imported from source! Your recipe_type, prep_notes, and postmortem_notes have been preserved.',
+        type: 'success',
+      });
     } catch (err) {
       const errorMsg = err.response?.data?.detail || 'Failed to re-import recipe';
       setError(errorMsg);
@@ -144,6 +158,7 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
           quantity: '',
           unit: '',
           order: newIndex,
+          prep_note: '',
         },
       ],
     });
@@ -312,35 +327,6 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
     setFormData({ ...formData, instructions: updated });
   };
 
-  const fillDemoData = () => {
-    setFormData({
-      name: 'Classic Spaghetti Carbonara',
-      recipe_type: 'Italian',
-      description: 'A creamy Roman pasta dish made with eggs, cheese, pancetta, and black pepper.',
-      prep_time_minutes: '10',
-      cook_time_minutes: '20',
-      prep_notes: 'Make sure to have all ingredients at room temperature. Use freshly grated Parmesan for best results.',
-      postmortem_notes: '',
-      source_url: 'https://example.com/carbonara-recipe',
-      ingredients: [
-        { ingredient_name: 'spaghetti', quantity: '1', unit: 'pound', order: 0 },
-        { ingredient_name: 'eggs', quantity: '4', unit: 'whole', order: 1 },
-        { ingredient_name: 'Parmesan cheese, grated', quantity: '1', unit: 'cup', order: 2 },
-        { ingredient_name: 'pancetta or guanciale', quantity: '8', unit: 'ounce', order: 3 },
-        { ingredient_name: 'black pepper', quantity: '1', unit: 'teaspoon', order: 4 },
-        { ingredient_name: 'salt', quantity: '1', unit: 'teaspoon', order: 5 },
-      ],
-      instructions: [
-        { step_number: 1, description: 'Bring a large pot of salted water to boil. Cook spaghetti according to package directions until al dente.', duration_minutes: '10' },
-        { step_number: 2, description: 'While pasta cooks, dice the pancetta and cook in a large skillet over medium heat until crispy, about 5-7 minutes.', duration_minutes: '7' },
-        { step_number: 3, description: 'In a bowl, whisk together eggs, Parmesan cheese, and black pepper.', duration_minutes: '2' },
-        { step_number: 4, description: 'Reserve 1 cup of pasta water, then drain the pasta. Add hot pasta to the skillet with pancetta.', duration_minutes: '1' },
-        { step_number: 5, description: 'Remove skillet from heat. Quickly stir in the egg mixture, tossing constantly. Add reserved pasta water as needed to create a creamy sauce.', duration_minutes: '2' },
-        { step_number: 6, description: 'Serve immediately with additional Parmesan and black pepper.', duration_minutes: '' },
-      ],
-    });
-  };
-
   const units = [
     'teaspoon', 'tablespoon', 'cup', 'fluid_ounce', 'pint', 'quart', 'gallon',
     'ml', 'liter', 'gram', 'kilogram', 'ounce', 'pound',
@@ -355,15 +341,6 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
           {recipeId ? 'Edit Recipe' : 'New Recipe'}
         </h1>
         <div className="flex gap-2">
-          {!recipeId && import.meta.env.DEV && (
-            <button
-              type="button"
-              onClick={fillDemoData}
-              className="px-4 py-2 bg-gruvbox-dark-purple hover:bg-gruvbox-dark-purple-bright rounded transition text-sm"
-            >
-              Fill Demo Data
-            </button>
-          )}
           {recipeId && formData.source_url && (
             <button
               type="button"
@@ -376,7 +353,16 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
           )}
           <button
             type="button"
-            onClick={() => navigate('/recipes')}
+            onClick={() => {
+              if (location.state?.returnTo) {
+                // If we have returnTo, preserve the tab state
+                navigate(location.state.returnTo, {
+                  state: { tab: location.state.tab }
+                });
+              } else {
+                navigate('/recipes');
+              }
+            }}
             className="px-4 py-2 bg-gruvbox-dark-gray hover:bg-gruvbox-dark-gray-bright rounded transition"
           >
             Cancel
@@ -498,46 +484,55 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
         {formData.ingredients.length === 0 ? (
           <p className="text-gruvbox-dark-gray">No ingredients yet. Click "Add" to get started.</p>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {formData.ingredients.map((ing, index) => (
-              <div key={index} className="flex gap-2">
+              <div key={index} className="space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    ref={(el) => (ingredientRefs.current[index] = el)}
+                    type="text"
+                    value={ing.ingredient_name}
+                    onChange={(e) => updateIngredient(index, 'ingredient_name', e.target.value)}
+                    className="flex-1 p-2 rounded bg-gruvbox-dark-bg border border-gruvbox-dark-gray text-gruvbox-dark-fg focus:outline-none focus:border-gruvbox-dark-orange-bright"
+                    placeholder="Ingredient name"
+                    required
+                  />
+                  <input
+                    type="number"
+                    value={ing.quantity}
+                    onChange={(e) => updateIngredient(index, 'quantity', e.target.value)}
+                    className="w-24 p-2 rounded bg-gruvbox-dark-bg border border-gruvbox-dark-gray text-gruvbox-dark-fg focus:outline-none focus:border-gruvbox-dark-orange-bright"
+                    placeholder="Qty"
+                    step="0.01"
+                    required={ing.unit && ing.unit !== ''}
+                  />
+                  <select
+                    value={ing.unit || ''}
+                    onChange={(e) => updateIngredient(index, 'unit', e.target.value)}
+                    className="w-32 p-2 rounded bg-gruvbox-dark-bg border border-gruvbox-dark-gray text-gruvbox-dark-fg focus:outline-none focus:border-gruvbox-dark-orange-bright"
+                  >
+                    <option value="">-- None --</option>
+                    {units.map((unit) => (
+                      <option key={unit} value={unit}>
+                        {unit}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => removeIngredient(index)}
+                    className="px-3 py-2 bg-gruvbox-dark-red hover:bg-gruvbox-dark-red-bright rounded transition"
+                  >
+                    ×
+                  </button>
+                </div>
                 <input
-                  ref={(el) => (ingredientRefs.current[index] = el)}
                   type="text"
-                  value={ing.ingredient_name}
-                  onChange={(e) => updateIngredient(index, 'ingredient_name', e.target.value)}
-                  className="flex-1 p-2 rounded bg-gruvbox-dark-bg border border-gruvbox-dark-gray text-gruvbox-dark-fg focus:outline-none focus:border-gruvbox-dark-orange-bright"
-                  placeholder="Ingredient name"
-                  required
+                  value={ing.prep_note || ''}
+                  onChange={(e) => updateIngredient(index, 'prep_note', e.target.value)}
+                  className="w-full p-2 rounded bg-gruvbox-dark-bg border border-gruvbox-dark-gray text-gruvbox-dark-fg focus:outline-none focus:border-gruvbox-dark-orange-bright text-sm"
+                  placeholder="Prep note (optional, e.g., '1-inch cubed', 'finely chopped')"
                 />
-                <input
-                  type="number"
-                  value={ing.quantity}
-                  onChange={(e) => updateIngredient(index, 'quantity', e.target.value)}
-                  className="w-24 p-2 rounded bg-gruvbox-dark-bg border border-gruvbox-dark-gray text-gruvbox-dark-fg focus:outline-none focus:border-gruvbox-dark-orange-bright"
-                  placeholder="Qty"
-                  step="0.01"
-                  required={ing.unit && ing.unit !== ''}
-                />
-                <select
-                  value={ing.unit || ''}
-                  onChange={(e) => updateIngredient(index, 'unit', e.target.value)}
-                  className="w-32 p-2 rounded bg-gruvbox-dark-bg border border-gruvbox-dark-gray text-gruvbox-dark-fg focus:outline-none focus:border-gruvbox-dark-orange-bright"
-                >
-                  <option value="">-- None --</option>
-                  {units.map((unit) => (
-                    <option key={unit} value={unit}>
-                      {unit}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => removeIngredient(index)}
-                  className="px-3 py-2 bg-gruvbox-dark-red hover:bg-gruvbox-dark-red-bright rounded transition"
-                >
-                  ×
-                </button>
               </div>
             ))}
           </div>
@@ -707,6 +702,14 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
         </div>
       )}
 
+      {/* Toast Notifications */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </form>
   );
 };

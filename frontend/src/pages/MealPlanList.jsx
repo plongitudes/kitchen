@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { mealPlanAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import Toast from '../components/Toast';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const MealPlanList = () => {
   const { isDark } = useTheme();
@@ -12,6 +14,8 @@ const MealPlanList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [advancing, setAdvancing] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState(null);
 
   useEffect(() => {
     loadMealPlans();
@@ -47,21 +51,27 @@ const MealPlanList = () => {
       return;
     }
 
-    if (!confirm('Start a new week? This will create a new meal plan instance.')) {
-      return;
-    }
-
-    try {
-      setAdvancing(true);
-      setError(null);
-      await mealPlanAPI.advanceWeek(targetSequenceId);
-      await loadMealPlans();
-      alert('New week started successfully!');
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to start new week');
-    } finally {
-      setAdvancing(false);
-    }
+    setConfirmDialog({
+      message: 'Start a new week? This will create a new meal plan instance.',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          setAdvancing(true);
+          setError(null);
+          await mealPlanAPI.advanceWeek(targetSequenceId);
+          await loadMealPlans();
+          setToast({
+            message: 'New week started successfully!',
+            type: 'success',
+          });
+        } catch (err) {
+          setError(err.response?.data?.detail || 'Failed to start new week');
+        } finally {
+          setAdvancing(false);
+        }
+      },
+      onCancel: () => setConfirmDialog(null),
+    });
   };
 
   if (loading) {
@@ -169,6 +179,24 @@ const MealPlanList = () => {
           </div>
         )}
       </div>
+
+      {/* Toast Notifications */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {/* Confirm Dialog */}
+      {confirmDialog && (
+        <ConfirmDialog
+          message={confirmDialog.message}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={confirmDialog.onCancel}
+        />
+      )}
     </div>
   );
 };

@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.config import get_settings
-from app.api import auth, recipes, schedules, meal_plans, discord, backup, templates
+from app.api import auth, recipes, schedules, meal_plans, discord, backup, templates, ingredients
 from app.api import settings as settings_api
 from app.core.deps import get_current_user
 from app.models.user import User
@@ -106,6 +106,7 @@ app.include_router(recipes.router)
 app.include_router(templates.router)
 app.include_router(schedules.router)
 app.include_router(meal_plans.router)
+app.include_router(ingredients.router)
 app.include_router(discord.router)
 app.include_router(settings_api.router)
 app.include_router(backup.router)

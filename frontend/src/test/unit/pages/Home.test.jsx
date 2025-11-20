@@ -1,23 +1,23 @@
 import { describe, it, expect } from 'vitest';
 import { screen } from '@testing-library/react';
-import { renderWithRouter } from '../../utils/test-utils';
+import { renderWithProviders } from '../../utils/test-utils';
 import Home from '../../../pages/Home';
 
 describe('Home Page', () => {
   it('renders welcome heading', () => {
-    renderWithRouter(<Home />);
+    renderWithProviders(<Home />);
 
     expect(screen.getByText("Welcome to Roane's Kitchen")).toBeInTheDocument();
   });
 
   it('renders description text', () => {
-    renderWithRouter(<Home />);
+    renderWithProviders(<Home />);
 
     expect(screen.getByText(/meal planning and grocery management system/i)).toBeInTheDocument();
   });
 
   it('renders all feature cards', () => {
-    renderWithRouter(<Home />);
+    renderWithProviders(<Home />);
 
     expect(screen.getByText('Recipes')).toBeInTheDocument();
     expect(screen.getByText('Manage your recipe collection')).toBeInTheDocument();
@@ -30,7 +30,7 @@ describe('Home Page', () => {
   });
 
   it('displays feature cards in a grid layout', () => {
-    const { container } = renderWithRouter(<Home />);
+    const { container } = renderWithProviders(<Home />);
 
     const grid = container.querySelector('.grid');
     expect(grid).toBeInTheDocument();

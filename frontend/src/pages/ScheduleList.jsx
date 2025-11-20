@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { scheduleAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import Toast from '../components/Toast';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const ScheduleList = () => {
   const { isDark } = useTheme();
@@ -9,6 +11,8 @@ const ScheduleList = () => {
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState(null);
 
   useEffect(() => {
     loadSchedules();
@@ -29,16 +33,22 @@ const ScheduleList = () => {
 
   const handleDelete = async (scheduleId, scheduleName, e) => {
     e.stopPropagation(); // Prevent navigation when clicking delete
-    if (!confirm(`Are you sure you want to delete "${scheduleName}"? This cannot be undone.`)) {
-      return;
-    }
-
-    try {
-      await scheduleAPI.delete(scheduleId);
-      await loadSchedules();
-    } catch (err) {
-      alert(err.response?.data?.detail || 'Failed to delete schedule');
-    }
+    setConfirmDialog({
+      message: `Are you sure you want to delete "${scheduleName}"? This cannot be undone.`,
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          await scheduleAPI.delete(scheduleId);
+          await loadSchedules();
+        } catch (err) {
+          setToast({
+            message: err.response?.data?.detail || 'Failed to delete schedule',
+            type: 'error',
+          });
+        }
+      },
+      onCancel: () => setConfirmDialog(null),
+    });
   };
 
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -166,6 +176,24 @@ const ScheduleList = () => {
           </div>
         )}
       </div>
+
+      {/* Toast Notifications */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {/* Confirm Dialog */}
+      {confirmDialog && (
+        <ConfirmDialog
+          message={confirmDialog.message}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={confirmDialog.onCancel}
+        />
+      )}
     </div>
   );
 };

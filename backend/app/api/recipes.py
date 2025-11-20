@@ -126,6 +126,7 @@ async def export_all_recipes_json(
                         "quantity": ing.quantity,
                         "unit": ing.unit,
                         "order": ing.order,
+                        "prep_note": ing.prep_note,
                     }
                     for ing in sorted(recipe.ingredients, key=lambda x: x.order)
                 ],
@@ -622,6 +623,7 @@ async def export_recipe_json(
                 "quantity": ing.quantity,
                 "unit": ing.unit,
                 "order": ing.order,
+                "prep_note": ing.prep_note,
             }
             for ing in sorted(recipe.ingredients, key=lambda x: x.order)
         ],
