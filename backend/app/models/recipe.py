@@ -114,6 +114,7 @@ class RecipeIngredient(Base):
         nullable=True,
         index=True,
     )
+    prep_note = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { templateAPI, authAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import Toast from '../components/Toast';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const TemplateDetail = () => {
   const { id } = useParams();
@@ -15,6 +17,8 @@ const TemplateDetail = () => {
   const [showForkModal, setShowForkModal] = useState(false);
   const [forking, setForking] = useState(false);
   const [retiring, setRetiring] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState(null);
 
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -47,7 +51,10 @@ const TemplateDetail = () => {
 
   const handleFork = async () => {
     if (!forkName.trim()) {
-      alert('Please enter a name for the forked template');
+      setToast({
+        message: 'Please enter a name for the forked template',
+        type: 'error',
+      });
       return;
     }
 
@@ -56,25 +63,34 @@ const TemplateDetail = () => {
       const response = await templateAPI.fork(id, forkName);
       navigate(`/templates/${response.data.id}`);
     } catch (err) {
-      alert(err.response?.data?.detail || 'Failed to fork template');
+      setToast({
+        message: err.response?.data?.detail || 'Failed to fork template',
+        type: 'error',
+      });
     } finally {
       setForking(false);
     }
   };
 
   const handleRetire = async () => {
-    if (!confirm('Are you sure you want to retire this template? It will be removed from all schedules.')) {
-      return;
-    }
-
-    try {
-      setRetiring(true);
-      await templateAPI.retire(id);
-      navigate('/templates');
-    } catch (err) {
-      alert(err.response?.data?.detail || 'Failed to retire template');
-      setRetiring(false);
-    }
+    setConfirmDialog({
+      message: 'Are you sure you want to retire this template? It will be removed from all schedules.',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          setRetiring(true);
+          await templateAPI.retire(id);
+          navigate('/templates');
+        } catch (err) {
+          setToast({
+            message: err.response?.data?.detail || 'Failed to retire template',
+            type: 'error',
+          });
+          setRetiring(false);
+        }
+      },
+      onCancel: () => setConfirmDialog(null),
+    });
   };
 
   const getAssignmentsForDay = (dayIndex) => {
@@ -318,6 +334,24 @@ const TemplateDetail = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Toast Notifications */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {/* Confirm Dialog */}
+      {confirmDialog && (
+        <ConfirmDialog
+          message={confirmDialog.message}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={confirmDialog.onCancel}
+        />
       )}
     </div>
   );

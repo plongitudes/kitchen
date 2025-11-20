@@ -4,6 +4,7 @@ import { recipeAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import RetireRecipeModal from '../components/RetireRecipeModal';
 import RecipeImportModal from '../components/RecipeImportModal';
+import Toast from '../components/Toast';
 
 const RecipeList = () => {
   const { isDark } = useTheme();
@@ -13,6 +14,7 @@ const RecipeList = () => {
   const [filter, setFilter] = useState({ include_retired: false });
   const [retireModal, setRetireModal] = useState({ isOpen: false, recipe: null });
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [toast, setToast] = useState(null);
   const navigate = useNavigate();
 
   const fetchRecipes = async () => {
@@ -55,7 +57,10 @@ const RecipeList = () => {
       }
     } catch (err) {
       const errorMsg = err.response?.data?.detail || 'Failed to retire recipe';
-      alert(errorMsg);
+      setToast({
+        message: errorMsg,
+        type: 'error',
+      });
     }
   };
 
@@ -64,7 +69,10 @@ const RecipeList = () => {
     if (!file) return;
 
     if (!file.name.endsWith('.json')) {
-      alert('Only .json files are allowed');
+      setToast({
+        message: 'Only .json files are allowed',
+        type: 'error',
+      });
       event.target.value = '';
       return;
     }
@@ -77,10 +85,16 @@ const RecipeList = () => {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      alert(response.data.message || 'Recipe imported successfully');
+      setToast({
+        message: response.data.message || 'Recipe imported successfully',
+        type: 'success',
+      });
       fetchRecipes(); // Refresh list
     } catch (err) {
-      alert(err.response?.data?.detail || 'Failed to import recipe');
+      setToast({
+        message: err.response?.data?.detail || 'Failed to import recipe',
+        type: 'error',
+      });
     } finally {
       event.target.value = ''; // Reset file input
     }
@@ -290,6 +304,15 @@ const RecipeList = () => {
           fetchRecipes(); // Refresh list after import
         }}
       />
+
+      {/* Toast Notifications */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 };

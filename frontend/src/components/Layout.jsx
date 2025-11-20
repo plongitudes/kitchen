@@ -107,6 +107,18 @@ const Layout = () => {
           </li>
           <li>
             <Link
+              to="/ingredients"
+              className={`block p-3 rounded transition ${
+                isDark
+                  ? 'hover:bg-gruvbox-dark-bg'
+                  : 'hover:bg-gruvbox-light-bg-hard'
+              }`}
+            >
+              Ingredients
+            </Link>
+          </li>
+          <li>
+            <Link
               to="/settings"
               className={`block p-3 rounded transition ${
                 isDark

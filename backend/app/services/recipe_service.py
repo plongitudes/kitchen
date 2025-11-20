@@ -163,6 +163,7 @@ class RecipeService:
                     unit=ing_data.unit,
                     order=ing_data.order,
                     common_ingredient_id=common_ingredient_id,  # Auto-matched or None
+                    prep_note=ing_data.prep_note,
                 )
                 db.add(ingredient)
 
@@ -236,6 +237,7 @@ class RecipeService:
                     unit=ing_data.unit,
                     order=ing_data.order,
                     common_ingredient_id=common_ingredient_id,
+                    prep_note=ing_data.prep_note,
                 )
                 db.add(ingredient)
 
@@ -411,6 +413,7 @@ class RecipeService:
             unit=ingredient_data.unit,
             order=ingredient_data.order,
             common_ingredient_id=common_ingredient_id,  # Auto-matched or None
+            prep_note=ingredient_data.prep_note,
         )
 
         db.add(ingredient)
@@ -445,6 +448,8 @@ class RecipeService:
             ingredient.unit = ingredient_data.unit
         if ingredient_data.order is not None:
             ingredient.order = ingredient_data.order
+        if ingredient_data.prep_note is not None:
+            ingredient.prep_note = ingredient_data.prep_note
 
         await db.commit()
         await db.refresh(ingredient)
