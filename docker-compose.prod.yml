@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:15.10-alpine
-    container_name: roanes-kitchen-postgres
+    container_name: kitchen-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: admin
@@ -11,7 +11,7 @@ services:
       # Unraid volume mapping
       - ${APPDATA_PATH:-./data}/postgres:/var/lib/postgresql/data
     networks:
-      - roanes-network
+      - kitchen-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin -d roanes_kitchen"]
       interval: 30s
@@ -22,7 +22,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: roanes-kitchen-backend
+    container_name: kitchen-backend
     restart: unless-stopped
     ports:
       - "${BACKEND_PORT:-8000}:8000"
@@ -48,7 +48,7 @@ services:
       retries: 3
       start_period: 40s
     networks:
-      - roanes-network
+      - kitchen-network
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
 
   frontend:
@@ -57,7 +57,7 @@ services:
       dockerfile: Dockerfile
       args:
         - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
-    container_name: roanes-kitchen-frontend
+    container_name: kitchen-frontend
     restart: unless-stopped
     ports:
       - "${FRONTEND_PORT:-80}:80"
@@ -71,11 +71,11 @@ services:
       backend:
         condition: service_healthy
     networks:
-      - roanes-network
+      - kitchen-network
 
   backup:
     image: postgres:15.10-alpine
-    container_name: roanes-kitchen-backup
+    container_name: kitchen-backup
     restart: unless-stopped
     environment:
       POSTGRES_USER: admin
@@ -92,12 +92,12 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - roanes-network
+      - kitchen-network
     entrypoint: /bin/sh
     command: -c "chmod +x /backup.sh && crond -f -l 2"
 
 networks:
-  roanes-network:
+  kitchen-network:
     driver: bridge
 
 volumes:

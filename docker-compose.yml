@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:15.10-alpine
-    container_name: roanes-kitchen-postgres
+    container_name: kitchen-postgres
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
@@ -20,7 +20,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: roanes-kitchen-backend
+    container_name: kitchen-backend
     ports:
       - "8000:8000"
       - "5678:5678"  # debugpy port
@@ -50,7 +50,7 @@ services:
 
   frontend:
     image: node:22.11.0-alpine
-    container_name: roanes-kitchen-frontend
+    container_name: kitchen-frontend
     working_dir: /app
     ports:
       - "5173:5173"
