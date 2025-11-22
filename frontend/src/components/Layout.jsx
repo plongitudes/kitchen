@@ -129,18 +129,6 @@ const Layout = () => {
               Settings
             </Link>
           </li>
-          <li>
-            <Link
-              to="/backup"
-              className={`block p-3 rounded transition ${
-                isDark
-                  ? 'hover:bg-gruvbox-dark-bg'
-                  : 'hover:bg-gruvbox-light-bg-hard'
-              }`}
-            >
-              Backup
-            </Link>
-          </li>
         </ul>
 
         <div className={`mt-8 pt-4 border-t ${

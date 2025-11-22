@@ -12,8 +12,8 @@ class Settings(Base):
     __tablename__ = "settings"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    discord_bot_token = Column(String, nullable=True)  # Encrypted
-    notification_channel_id = Column(String, nullable=True)
+    # Discord credentials moved to environment variables (.env file)
+    # See DISCORD_BOT_TOKEN, DISCORD_NOTIFICATION_CHANNEL_ID, DISCORD_TEST_CHANNEL_ID
     notification_time = Column(String, default="07:00", nullable=False)  # HH:MM format
     notification_timezone = Column(String, default="UTC", nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

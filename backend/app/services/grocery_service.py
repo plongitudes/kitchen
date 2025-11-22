@@ -23,6 +23,15 @@ from app.models.recipe import Recipe, RecipeIngredient
 ureg = UnitRegistry()
 
 
+def _get_unit_value(unit) -> str:
+    """Extract string value from unit, handling both enum and string types."""
+    if unit is None:
+        return ""
+    if hasattr(unit, 'value'):
+        return unit.value
+    return str(unit)
+
+
 class GroceryService:
     """Service layer for grocery list business logic."""
 
@@ -272,7 +281,7 @@ class GroceryService:
             {
                 "recipe_id": str(ing.recipe_id),
                 "quantity": ing.quantity,
-                "unit": ing.unit or "",
+                "unit": _get_unit_value(ing.unit),
             }
             for ing in ingredients
             if ing.quantity is not None
@@ -281,7 +290,7 @@ class GroceryService:
         # Check if all ingredients use the same unit (case-insensitive)
         # If so, preserve that unit instead of converting to canonical
         units_with_quantities = [
-            (ing.unit, ing.quantity)
+            (_get_unit_value(ing.unit), ing.quantity)
             for ing in ingredients
             if ing.unit and ing.quantity is not None
         ]
@@ -290,7 +299,7 @@ class GroceryService:
             unique_units = set(u.lower().strip() for u, _ in units_with_quantities)
             if len(unique_units) == 1:
                 # All same unit - preserve it, just sum quantities
-                preserved_unit = units_with_quantities[0][0]  # Original case
+                preserved_unit = units_with_quantities[0][0]  # Already converted to string
                 total_quantity = sum(q for _, q in units_with_quantities)
 
                 return [
@@ -323,7 +332,8 @@ class GroceryService:
                 )
                 continue
 
-            unit = ing.unit.lower().strip()
+            unit_value = _get_unit_value(ing.unit)
+            unit = unit_value.lower().strip()
             quantity = ing.quantity
 
             # Handle non-convertible units
@@ -331,7 +341,7 @@ class GroceryService:
                 count_quantities.append(
                     {
                         "quantity": quantity,
-                        "unit": ing.unit,  # Preserve original case
+                        "unit": unit_value,  # Use converted value
                     }
                 )
                 continue
@@ -350,7 +360,7 @@ class GroceryService:
                     count_quantities.append(
                         {
                             "quantity": quantity,
-                            "unit": ing.unit,
+                            "unit": unit_value,
                         }
                     )
             except (DimensionalityError, Exception):
@@ -358,7 +368,7 @@ class GroceryService:
                 count_quantities.append(
                     {
                         "quantity": quantity,
-                        "unit": ing.unit,
+                        "unit": unit_value,
                     }
                 )
 
@@ -653,7 +663,7 @@ class GroceryService:
                 else:
                     # Use ounces for smaller quantities (round up)
                     imperial_str = f"{int(math.ceil(oz_val))} oz"
-        except:
+        except Exception:
             # If conversion fails, use original unit (only set metric, leave imperial None)
             # This prevents duplicate display like "1 bunch / 1 bunch"
             rounded_qty = int(math.ceil(quantity))

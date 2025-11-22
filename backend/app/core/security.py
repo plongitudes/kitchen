@@ -37,14 +37,14 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     if "user_id" in to_encode and isinstance(to_encode["user_id"], UUID):
         to_encode["user_id"] = str(to_encode["user_id"])
 
-    encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+    encoded_jwt = jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.algorithm)
     return encoded_jwt
 
 
 def decode_access_token(token: str) -> Optional[dict]:
     """Decode and verify a JWT access token."""
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.algorithm])
         return payload
     except JWTError:
         return None
