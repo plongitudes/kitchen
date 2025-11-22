@@ -22,7 +22,6 @@ import GroceryListAll from './pages/GroceryListAll';
 import GroceryListDetail from './pages/GroceryListDetail';
 import Ingredients from './pages/Ingredients';
 import Settings from './pages/Settings';
-import Backup from './pages/Backup';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -72,7 +71,6 @@ function App() {
               <Route path="grocery-lists" element={<GroceryListAll />} />
               <Route path="ingredients" element={<Ingredients />} />
               <Route path="settings" element={<Settings />} />
-              <Route path="backup" element={<Backup />} />
             </Route>
           </Routes>
         </AuthProvider>

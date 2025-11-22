@@ -1,6 +1,6 @@
 # Docker Hub Setup Guide
 
-This guide walks through setting up Docker Hub publishing for the Roanes Kitchen project.
+This guide walks through setting up Docker Hub publishing for the Kitchen project.
 
 ## Prerequisites
 
@@ -10,14 +10,14 @@ This guide walks through setting up Docker Hub publishing for the Roanes Kitchen
 ## Step 1: Create Docker Hub Repositories
 
 Create two public repositories on Docker Hub:
-- `plongitudes/roanes-kitchen-backend`
-- `plongitudes/roanes-kitchen-frontend`
+- `plongitudes/kitchen-backend`
+- `plongitudes/kitchen-frontend`
 
 ## Step 2: Create Docker Hub Access Token
 
 1. Go to Docker Hub → Account Settings → Security
 2. Click "New Access Token"
-3. Name: `github-actions-roanes-kitchen`
+3. Name: `github-actions-kitchen`
 4. Access permissions: Read, Write, Delete
 5. Generate and **copy the token** (you won't see it again)
 
@@ -37,7 +37,7 @@ If you want to use a different Docker Hub organization/username, update the `IMA
 ```yaml
 env:
   REGISTRY: docker.io
-  IMAGE_PREFIX: your-username/roanes-kitchen  # Change this
+  IMAGE_PREFIX: your-username/kitchen  # Change this
 ```
 
 ## How It Works
@@ -62,8 +62,8 @@ The workflow automatically:
 2. Check the Actions tab to see the workflow run
 
 3. Verify images on Docker Hub:
-   - https://hub.docker.com/r/plongitudes/roanes-kitchen-backend
-   - https://hub.docker.com/r/plongitudes/roanes-kitchen-frontend
+   - https://hub.docker.com/r/plongitudes/kitchen-backend
+   - https://hub.docker.com/r/plongitudes/kitchen-frontend
 
 ## Using the Published Images
 
@@ -71,10 +71,10 @@ Update `docker-compose.prod.yml` to use published images instead of building loc
 
 ```yaml
 backend:
-  image: plongitudes/roanes-kitchen-backend:latest
+  image: plongitudes/kitchen-backend:latest
   # Remove build section
 
 frontend:
-  image: plongitudes/roanes-kitchen-frontend:latest
+  image: plongitudes/kitchen-frontend:latest
   # Remove build section
 ```

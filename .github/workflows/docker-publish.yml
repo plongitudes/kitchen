@@ -10,7 +10,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_PREFIX: plongitudes/roanes-kitchen
+  IMAGE_PREFIX: plongitudes/kitchen
 
 jobs:
   build-and-push:

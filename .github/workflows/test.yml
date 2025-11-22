@@ -46,7 +46,7 @@ jobs:
       working-directory: ./backend
       env:
         DATABASE_URL: postgresql+asyncpg://roanes_test:test_password@localhost:5433/roanes_test
-        SECRET_KEY: test-secret-key-for-ci
+        JWT_SECRET_KEY: test-secret-key-for-ci
         ENVIRONMENT: test
       run: |
         pytest --cov=app --cov-report=term --cov-report=xml -v

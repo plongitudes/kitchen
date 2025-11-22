@@ -552,3 +552,220 @@ class TestMealPlanInstances:
 
         assert response.status_code == 400
         assert "not found at position" in response.json()["detail"].lower()
+
+
+class TestGroceryListAutoGeneration:
+    """Test automatic grocery list generation on week advancement."""
+
+    @pytest.fixture
+    async def schedule_with_shop_and_cook_days(
+        self,
+        async_authenticated_client: TestClient,
+        async_test_user,
+    ):
+        """Create a schedule with a template that has shop and cook days."""
+        # Create a recipe first
+        recipe_response = async_authenticated_client.post(
+            "/recipes",
+            json={
+                "name": "Test Pasta",
+                "servings": 4,
+                "recipe_type": "dinner",
+                "cook_time_minutes": 30,
+                "instructions": [{"step_number": 1, "description": "Cook pasta"}],
+                "ingredients": [
+                    {"ingredient_name": "Pasta", "quantity": 1, "unit": "pound", "order": 1},
+                    {"ingredient_name": "Tomato sauce", "quantity": 2, "unit": "cup", "order": 2},
+                ],
+            },
+        )
+        assert recipe_response.status_code == 201
+        recipe = recipe_response.json()
+
+        # Create sequence
+        sequence_response = async_authenticated_client.post(
+            "/schedules",
+            json={
+                "name": "Grocery Test Schedule",
+                "advancement_day_of_week": 0,
+                "advancement_time": "08:00",
+            },
+        )
+        sequence = sequence_response.json()
+
+        # Create template with shop on Sunday (day 0) and cook on Tuesday (day 2)
+        template_response = async_authenticated_client.post(
+            "/templates",
+            json={
+                "name": "Shop and Cook Week",
+                "assignments": [
+                    {
+                        "day_of_week": 0,  # Sunday - shop
+                        "assigned_user_id": str(async_test_user.id),
+                        "action": "shop",
+                        "order": 0,
+                    },
+                    {
+                        "day_of_week": 2,  # Tuesday - cook
+                        "assigned_user_id": str(async_test_user.id),
+                        "action": "cook",
+                        "recipe_id": recipe["id"],
+                        "order": 0,
+                    },
+                    {
+                        "day_of_week": 4,  # Thursday - cook
+                        "assigned_user_id": str(async_test_user.id),
+                        "action": "cook",
+                        "recipe_id": recipe["id"],
+                        "order": 0,
+                    },
+                ],
+            },
+        )
+        assert template_response.status_code == 201
+        template = template_response.json()
+
+        # Associate with sequence
+        async_authenticated_client.post(
+            f"/schedules/{sequence['id']}/templates",
+            json={"week_template_id": template["id"], "position": 1},
+        )
+
+        return {
+            "sequence_id": sequence["id"],
+            "template": template,
+            "recipe": recipe,
+        }
+
+    def test_advance_week_auto_generates_grocery_lists(
+        self,
+        async_authenticated_client: TestClient,
+        schedule_with_shop_and_cook_days: dict,
+    ):
+        """Test that advancing a week auto-generates grocery lists for shop days."""
+        sequence_id = schedule_with_shop_and_cook_days["sequence_id"]
+
+        # Advance week to create instance
+        response = async_authenticated_client.post(
+            "/meal-plans/advance-week",
+            json={"sequence_id": sequence_id},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        instance_id = data["new_instance"]["id"]
+
+        # Check that grocery lists were auto-generated
+        grocery_response = async_authenticated_client.get(
+            f"/meal-plans/{instance_id}/grocery-lists"
+        )
+        assert grocery_response.status_code == 200
+        grocery_lists = grocery_response.json()
+
+        # Should have 1 grocery list (one for each shop day)
+        assert len(grocery_lists) >= 1
+
+    def test_auto_generated_grocery_list_has_correct_shopping_date(
+        self,
+        async_authenticated_client: TestClient,
+        schedule_with_shop_and_cook_days: dict,
+    ):
+        """Test that auto-generated grocery list has the correct shopping date."""
+        sequence_id = schedule_with_shop_and_cook_days["sequence_id"]
+
+        # Advance week
+        response = async_authenticated_client.post(
+            "/meal-plans/advance-week",
+            json={"sequence_id": sequence_id},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        instance = data["new_instance"]
+        instance_id = instance["id"]
+        start_date = date.fromisoformat(instance["instance_start_date"])
+
+        # Get grocery lists
+        grocery_response = async_authenticated_client.get(
+            f"/meal-plans/{instance_id}/grocery-lists"
+        )
+        grocery_lists = grocery_response.json()
+
+        # Shop day is Sunday (day 0), so shopping_date should be start_date + 0
+        assert len(grocery_lists) >= 1
+        shopping_dates = [date.fromisoformat(gl["shopping_date"]) for gl in grocery_lists]
+        expected_shop_date = start_date  # Day 0 = Sunday = start_date
+        assert expected_shop_date in shopping_dates
+
+    def test_auto_generated_grocery_list_contains_ingredients(
+        self,
+        async_authenticated_client: TestClient,
+        schedule_with_shop_and_cook_days: dict,
+    ):
+        """Test that auto-generated grocery list contains aggregated ingredients."""
+        sequence_id = schedule_with_shop_and_cook_days["sequence_id"]
+
+        # Advance week
+        response = async_authenticated_client.post(
+            "/meal-plans/advance-week",
+            json={"sequence_id": sequence_id},
+        )
+
+        assert response.status_code == 200
+        instance_id = response.json()["new_instance"]["id"]
+
+        # Get grocery lists
+        grocery_response = async_authenticated_client.get(
+            f"/meal-plans/{instance_id}/grocery-lists"
+        )
+        grocery_lists = grocery_response.json()
+
+        assert len(grocery_lists) >= 1
+
+        # Get the first grocery list details
+        grocery_list = grocery_lists[0]
+        grocery_list_id = grocery_list["id"]
+
+        # Fetch full details
+        detail_response = async_authenticated_client.get(
+            f"/meal-plans/grocery-lists/{grocery_list_id}"
+        )
+        assert detail_response.status_code == 200
+        detail = detail_response.json()
+
+        # Should have items from the recipe (Pasta and Tomato sauce)
+        assert "items" in detail
+        assert len(detail["items"]) > 0
+
+        ingredient_names = [item["ingredient_name"].lower() for item in detail["items"]]
+        assert any("pasta" in name for name in ingredient_names)
+
+    def test_start_on_week_also_auto_generates_grocery_lists(
+        self,
+        async_authenticated_client: TestClient,
+        schedule_with_shop_and_cook_days: dict,
+    ):
+        """Test that start-on-week also auto-generates grocery lists."""
+        sequence_id = schedule_with_shop_and_cook_days["sequence_id"]
+        template_id = schedule_with_shop_and_cook_days["template"]["id"]
+
+        # Use start-on-week instead of advance-week
+        response = async_authenticated_client.post(
+            f"/meal-plans/start-on-week?sequence_id={sequence_id}",
+            json={
+                "week_template_id": template_id,
+                "position": 1,
+            },
+        )
+
+        assert response.status_code == 200
+        instance_id = response.json()["new_instance"]["id"]
+
+        # Check that grocery lists were auto-generated
+        grocery_response = async_authenticated_client.get(
+            f"/meal-plans/{instance_id}/grocery-lists"
+        )
+        assert grocery_response.status_code == 200
+        grocery_lists = grocery_response.json()
+
+        assert len(grocery_lists) >= 1

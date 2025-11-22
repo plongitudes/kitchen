@@ -8,9 +8,6 @@ from app.core.deps import get_current_user
 from app.models.user import User
 from app.services.discord_service import get_bot
 from app.services.scheduler_service import start_scheduler, stop_scheduler
-from app.db.session import AsyncSessionLocal
-from app.models.settings import Settings
-from sqlalchemy import select
 import logging
 
 logger = logging.getLogger(__name__)
@@ -21,30 +18,11 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     """Application lifespan manager for startup and shutdown."""
     logger.info("Starting application lifespan...")
-    # Startup: Initialize Discord bot from settings
+    # Startup: Initialize Discord bot from environment variables
     try:
-        discord_token = None
-        discord_channel_id = None
-
-        # In development, prioritize env vars over database settings
-        if settings.environment == "development":
-            if settings.discord_bot_token and settings.discord_channel_id:
-                discord_token = settings.discord_bot_token
-                discord_channel_id = settings.discord_channel_id
-                logger.info("Using Discord credentials from environment variables (development mode)")
-            else:
-                logger.info("No Discord credentials in .env, checking database...")
-
-        # If not in dev mode or env vars not set, check database
-        if not discord_token:
-            async with AsyncSessionLocal() as session:
-                result = await session.execute(select(Settings).limit(1))
-                app_settings = result.scalar_one_or_none()
-
-                if app_settings and app_settings.discord_bot_token and app_settings.notification_channel_id:
-                    discord_token = app_settings.discord_bot_token
-                    discord_channel_id = app_settings.notification_channel_id
-                    logger.info("Using Discord credentials from database")
+        # Read Discord credentials from environment variables only
+        discord_token = settings.discord_bot_token
+        discord_channel_id = settings.discord_notification_channel_id
 
         # Initialize bot if we have credentials
         if discord_token and discord_channel_id:
@@ -54,11 +32,11 @@ async def lifespan(app: FastAPI):
                     token=discord_token,
                     channel_id=int(discord_channel_id)
                 )
-                logger.info("Discord bot initialized successfully")
+                logger.info(f"Discord bot initialized successfully (channel: {discord_channel_id})")
             except Exception as e:
                 logger.error(f"Failed to initialize Discord bot: {e}")
         else:
-            logger.info("Discord bot not configured - skipping initialization")
+            logger.info("Discord bot not configured - set DISCORD_BOT_TOKEN and DISCORD_NOTIFICATION_CHANNEL_ID in .env")
     except Exception as e:
         logger.error(f"Error during startup: {e}")
 

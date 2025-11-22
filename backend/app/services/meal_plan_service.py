@@ -16,6 +16,9 @@ from app.models.schedule import (
 from app.models.recipe import Recipe
 from app.schemas.meal_plan import DayAssignmentWithDate
 from app.services.schedule_service import ScheduleService
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class MealPlanService:
@@ -155,6 +158,138 @@ class MealPlanService:
         )
 
         return instance
+
+    @staticmethod
+    async def auto_generate_grocery_lists(
+        db: AsyncSession,
+        instance: MealPlanInstance,
+    ) -> List:
+        """Auto-generate grocery lists for all shopping days in the instance's template.
+
+        Args:
+            db: Database session
+            instance: MealPlanInstance to generate grocery lists for
+
+        Returns:
+            List of generated GroceryList objects
+        """
+        from app.services.grocery_service import GroceryService
+
+        # Load template with assignments if not already loaded
+        if not instance.week_template:
+            instance = await MealPlanService.get_instance_by_id(
+                db=db,
+                instance_id=instance.id,
+            )
+
+        template = instance.week_template
+        start_date = instance.instance_start_date
+
+        # Find all shop days in the template
+        shopping_days = []
+        for assignment in template.day_assignments:
+            if assignment.action.lower() == "shop":
+                shopping_date = start_date + timedelta(days=assignment.day_of_week)
+                shopping_days.append(shopping_date)
+
+        if not shopping_days:
+            logger.info(f"No shopping days found for instance {instance.id}, skipping grocery list generation")
+            return []
+
+        # Generate a grocery list for each shopping day
+        generated_lists = []
+        for shopping_date in shopping_days:
+            try:
+                grocery_list = await GroceryService.generate_grocery_list(
+                    db=db,
+                    instance_id=instance.id,
+                    shopping_date=shopping_date,
+                )
+                generated_lists.append(grocery_list)
+                logger.info(f"Auto-generated grocery list for {shopping_date} (instance {instance.id})")
+            except HTTPException as e:
+                # Log but don't fail if grocery list generation has issues
+                logger.warning(f"Could not generate grocery list for {shopping_date}: {e.detail}")
+            except Exception as e:
+                logger.error(f"Error generating grocery list for {shopping_date}: {e}")
+
+        return generated_lists
+
+    @staticmethod
+    async def get_merged_assignments_for_day(
+        db: AsyncSession,
+        instance: MealPlanInstance,
+        day_of_week: int,
+    ) -> List[tuple]:
+        """Get merged assignments for a specific day of week.
+
+        Merges template assignments with per-instance overrides.
+        Per-instance assignments take precedence over template assignments.
+
+        Args:
+            db: Database session
+            instance: MealPlanInstance to get assignments for
+            day_of_week: Day of week (0=Sunday, 6=Saturday)
+
+        Returns:
+            List of tuples: (assignment_object, user, recipe)
+            where assignment_object is either MealAssignment or WeekDayAssignment
+        """
+        from app.models.user import User
+
+        template = instance.week_template
+
+        # Load per-instance overrides for this day
+        meal_assignments_query = (
+            select(MealAssignment)
+            .where(MealAssignment.meal_plan_instance_id == instance.id)
+            .where(MealAssignment.day_of_week == day_of_week)
+            .order_by(MealAssignment.order)
+        )
+        meal_assignments_result = await db.execute(meal_assignments_query)
+        meal_assignments = meal_assignments_result.scalars().all()
+
+        results = []
+
+        # If there are per-instance overrides, use those
+        if meal_assignments:
+            for assignment in meal_assignments:
+                # Get user
+                user_result = await db.execute(
+                    select(User).where(User.id == assignment.assigned_user_id)
+                )
+                user = user_result.scalar_one_or_none()
+
+                # Get recipe if needed
+                recipe = None
+                if assignment.recipe_id:
+                    recipe_result = await db.execute(
+                        select(Recipe).where(Recipe.id == assignment.recipe_id)
+                    )
+                    recipe = recipe_result.scalar_one_or_none()
+
+                results.append((assignment, user, recipe))
+        else:
+            # Use template assignments for this day
+            for day_assignment in template.day_assignments:
+                if day_assignment.day_of_week == day_of_week:
+                    # Get user
+                    user_result = await db.execute(
+                        select(User).where(User.id == day_assignment.assigned_user_id)
+                    )
+                    user = user_result.scalar_one_or_none()
+
+                    # Get recipe if needed
+                    recipe = None
+                    if day_assignment.recipe_id:
+                        recipe_result = await db.execute(
+                            select(Recipe).where(Recipe.id == day_assignment.recipe_id)
+                        )
+                        recipe = recipe_result.scalar_one_or_none()
+
+                    results.append((day_assignment, user, recipe))
+
+        return results
 
     @staticmethod
     async def build_instance_detail(
@@ -349,6 +484,12 @@ class MealPlanService:
             sequence_id=sequence_id,
         )
 
+        # Auto-generate grocery lists for shop days
+        await MealPlanService.auto_generate_grocery_lists(
+            db=db,
+            instance=instance,
+        )
+
         await db.commit()
         await db.refresh(sequence)
 
@@ -482,6 +623,12 @@ class MealPlanService:
             template_id=week_template_id,
             instance_start_date=instance_start_date,
             sequence_id=sequence_id,
+        )
+
+        # Auto-generate grocery lists for shop days
+        await MealPlanService.auto_generate_grocery_lists(
+            db=db,
+            instance=new_instance,
         )
 
         # Add preserved assignments back
