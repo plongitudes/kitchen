@@ -46,7 +46,7 @@ def build_shop_notification(
     assignment: MealAssignment,
     frontend_url: str,
     bot_name: str,
-    grocery_list_id: str = None,
+    grocery_list_id: Optional[str] = None,
 ) -> str:
     """Build notification message for shopping action."""
     user_mention = build_user_mention(user)
