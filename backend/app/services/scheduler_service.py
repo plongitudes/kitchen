@@ -233,6 +233,12 @@ async def advance_week():
                     sequence_id=sequence.id,
                 )
 
+                # Auto-generate grocery lists for shop days
+                await MealPlanService.auto_generate_grocery_lists(
+                    db=session,
+                    instance=new_instance,
+                )
+
                 await session.commit()
 
                 # Send notification
