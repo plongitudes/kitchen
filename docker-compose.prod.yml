@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: admin
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD not set - see .env.example}
       POSTGRES_DB: roanes_kitchen
     volumes:
       # Unraid volume mapping
@@ -27,10 +27,12 @@ services:
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://admin:${POSTGRES_PASSWORD:-admin}@postgres:5432/roanes_kitchen
-      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      # REQUIRED: Set these in .env before deploying - see .env.example
+      - DATABASE_URL=postgresql+asyncpg://admin:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD not set}@postgres:5432/roanes_kitchen
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:?JWT_SECRET_KEY not set - see .env.example}
       - DEBUG=false
       - ENVIRONMENT=production
+      # Optional: Discord notifications
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
       - DISCORD_CHANNEL_ID=${DISCORD_CHANNEL_ID:-}
     volumes:

@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_days: int = 7
 
+    # Frontend URL (for notification links)
+    frontend_url: str = "http://localhost:5173"
+
     # Discord Bot (Optional - for meal plan notifications)
     discord_bot_token: Optional[str] = None
     discord_notification_channel_id: Optional[str] = None

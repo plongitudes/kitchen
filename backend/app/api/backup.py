@@ -8,14 +8,31 @@ from datetime import datetime
 import subprocess
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 from app.core.deps import get_current_user, get_current_user_no_db
 from app.models.user import User
+from app.core.config import get_settings
 
 router = APIRouter(prefix="/backup", tags=["backup"])
 
 BACKUP_DIR = Path("/tmp/roanes-kitchen-backups")
 BACKUP_DIR.mkdir(exist_ok=True)
+
+settings = get_settings()
+
+# Parse database credentials from DATABASE_URL
+def get_db_credentials():
+    """Extract database credentials from DATABASE_URL."""
+    db_url = settings.database_url.replace("postgresql+asyncpg://", "postgresql://")
+    parsed = urlparse(db_url)
+    return {
+        "host": parsed.hostname or "postgres",
+        "port": parsed.port or 5432,
+        "user": parsed.username or "admin",
+        "password": parsed.password or "admin",
+        "database": parsed.path.lstrip("/") or "roanes_kitchen",
+    }
 
 
 @router.post("/create")
@@ -27,23 +44,25 @@ async def create_backup(
     filename = f"roanes_kitchen_backup_{timestamp}.sql"
     filepath = BACKUP_DIR / filename
 
+    db_creds = get_db_credentials()
+
     try:
         # Use pg_dump to create backup
         result = subprocess.run(
             [
                 "pg_dump",
                 "-h",
-                "postgres",
+                db_creds["host"],
                 "-U",
-                "admin",
+                db_creds["user"],
                 "-d",
-                "roanes_kitchen",
+                db_creds["database"],
                 "-f",
                 str(filepath),
                 "--no-owner",
                 "--no-acl",
             ],
-            env={**os.environ, "PGPASSWORD": "admin"},
+            env={**os.environ, "PGPASSWORD": db_creds["password"]},
             capture_output=True,
             text=True,
         )
@@ -102,22 +121,24 @@ async def restore_backup(
             status_code=status.HTTP_404_NOT_FOUND, detail="Backup file not found"
         )
 
+    db_creds = get_db_credentials()
+
     # Environment for PostgreSQL commands
-    pg_env = {**os.environ, "PGPASSWORD": "admin"}
+    pg_env = {**os.environ, "PGPASSWORD": db_creds["password"]}
 
     try:
         # Step 1: Terminate active connections
         terminate_result = subprocess.run(
             [
                 "psql",
-                "-h", "postgres",
-                "-U", "admin",
+                "-h", db_creds["host"],
+                "-U", db_creds["user"],
                 "-d", "postgres",
                 "-c",
-                "SELECT pg_terminate_backend(pg_stat_activity.pid) "
-                "FROM pg_stat_activity "
-                "WHERE pg_stat_activity.datname = 'roanes_kitchen' "
-                "AND pid <> pg_backend_pid();"
+                f"SELECT pg_terminate_backend(pg_stat_activity.pid) "
+                f"FROM pg_stat_activity "
+                f"WHERE pg_stat_activity.datname = '{db_creds['database']}' "
+                f"AND pid <> pg_backend_pid();"
             ],
             env=pg_env,
             capture_output=True,
@@ -129,10 +150,10 @@ async def restore_backup(
         drop_result = subprocess.run(
             [
                 "psql",
-                "-h", "postgres",
-                "-U", "admin",
+                "-h", db_creds["host"],
+                "-U", db_creds["user"],
                 "-d", "postgres",
-                "-c", "DROP DATABASE IF EXISTS roanes_kitchen;"
+                "-c", f"DROP DATABASE IF EXISTS {db_creds['database']};"
             ],
             env=pg_env,
             capture_output=True,
@@ -146,10 +167,10 @@ async def restore_backup(
         create_result = subprocess.run(
             [
                 "psql",
-                "-h", "postgres",
-                "-U", "admin",
+                "-h", db_creds["host"],
+                "-U", db_creds["user"],
                 "-d", "postgres",
-                "-c", "CREATE DATABASE roanes_kitchen;"
+                "-c", f"CREATE DATABASE {db_creds['database']};"
             ],
             env=pg_env,
             capture_output=True,
@@ -163,9 +184,9 @@ async def restore_backup(
         restore_result = subprocess.run(
             [
                 "psql",
-                "-h", "postgres",
-                "-U", "admin",
-                "-d", "roanes_kitchen",
+                "-h", db_creds["host"],
+                "-U", db_creds["user"],
+                "-d", db_creds["database"],
                 "-f", str(filepath)
             ],
             env=pg_env,
@@ -176,6 +197,17 @@ async def restore_backup(
 
         if restore_result.returncode != 0:
             raise Exception(f"Failed to restore from backup: {restore_result.stderr}")
+
+        # Step 5: Run migrations to bring schema up to date
+        migration_result = subprocess.run(
+            ["alembic", "upgrade", "head"],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+
+        if migration_result.returncode != 0:
+            raise Exception(f"Failed to run migrations: {migration_result.stderr}")
 
         return {
             "message": "Database restored successfully. Please reload the page to reconnect.",

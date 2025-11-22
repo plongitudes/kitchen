@@ -81,12 +81,13 @@ class DiscordBot:
             except asyncio.CancelledError:
                 pass
 
-    async def send_message(self, content: str) -> bool:
+    async def send_message(self, content: str, channel_id: Optional[int] = None) -> bool:
         """
         Send a message to the configured channel.
 
         Args:
             content: Message content to send
+            channel_id: Optional channel ID to override the default configured channel
 
         Returns:
             True if message was sent successfully, False otherwise
@@ -95,23 +96,26 @@ class DiscordBot:
             logger.error("Discord bot is not running")
             return False
 
-        if not self.channel_id:
+        # Use provided channel_id or fall back to configured channel
+        target_channel_id = channel_id if channel_id is not None else self.channel_id
+
+        if not target_channel_id:
             logger.error("No channel ID configured")
             return False
 
         try:
-            channel = await self.bot.fetch_channel(self.channel_id)
+            channel = await self.bot.fetch_channel(target_channel_id)
             if not channel:
-                logger.error(f"Channel {self.channel_id} not found")
+                logger.error(f"Channel {target_channel_id} not found")
                 return False
 
             await channel.send(content)
-            logger.info(f"Sent Discord message to channel {self.channel_id}")
+            logger.info(f"Sent Discord message to channel {target_channel_id}")
             return True
 
         except discord.Forbidden:
             logger.error(
-                f"Bot doesn't have permission to send messages to channel {self.channel_id}"
+                f"Bot doesn't have permission to send messages to channel {target_channel_id}"
             )
             return False
         except discord.HTTPException as e:
@@ -206,7 +210,9 @@ class NotificationFormatter:
             quantity = item.get("total_quantity", 0)
             unit = item.get("unit", "")
             name = item.get("ingredient_name", "")
-            lines.append(f"• {quantity} {unit} {name}")
+            # Convert enum to string value if needed
+            unit_str = unit.value if hasattr(unit, 'value') else str(unit)
+            lines.append(f"• {quantity} {unit_str} {name}")
 
         lines.append("")
         lines.append(f"Total items: {len(items)}")
