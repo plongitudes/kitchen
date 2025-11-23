@@ -19,7 +19,7 @@ fi
 echo "Starting database restore from: $BACKUP_FILE"
 
 # Run all commands in the postgres container to avoid backend connection issues
-docker exec roanes-kitchen-postgres bash -c "
+docker exec kitchen-postgres bash -c "
     export PGPASSWORD=admin
 
     echo 'Step 1: Terminating all connections...'
@@ -39,11 +39,11 @@ docker exec roanes-kitchen-postgres bash -c "
 
 # Copy backup file into postgres container
 echo "Step 4: Copying backup file to postgres container..."
-docker cp "$BACKUP_FILE" roanes-kitchen-postgres:/tmp/restore.sql
+docker cp "$BACKUP_FILE" kitchen-postgres:/tmp/restore.sql
 
 # Restore from backup
 echo "Step 5: Restoring from backup..."
-docker exec roanes-kitchen-postgres bash -c "
+docker exec kitchen-postgres bash -c "
     export PGPASSWORD=admin
     psql -U admin -d roanes_kitchen -f /tmp/restore.sql
     rm -f /tmp/restore.sql

@@ -17,28 +17,28 @@ SSH into your Unraid server and clone the repository:
 
 ```bash
 cd /mnt/user/appdata
-git clone <repository-url> roanes-kitchen
-cd roanes-kitchen
+git clone <repository-url> kitchen
+cd kitchen
 ```
 
 ### 2. Configure Environment
 
-Copy the production environment template:
+Copy the environment template:
 
 ```bash
-cp .env.prod.example .env.prod
+cp .env.example .env
 ```
 
-Edit `.env.prod` with your production values:
+Edit `.env` with your production values:
 
 ```bash
-nano .env.prod
+nano .env
 ```
 
 **Important configurations to change:**
 
 - `POSTGRES_PASSWORD`: Set a strong database password
-- `SECRET_KEY`: Generate with `python -c "import secrets; print(secrets.token_urlsafe(32))"`
+- `JWT_SECRET_KEY`: Generate with `python -c "import secrets; print(secrets.token_urlsafe(32))"`
 - `VITE_API_URL`: Set to your server's Tailscale address or local IP
 
 ### 3. Deploy
@@ -46,7 +46,7 @@ nano .env.prod
 Start all services:
 
 ```bash
-docker-compose -f docker-compose.prod.yml --env-file .env.prod up -d
+docker-compose -f docker-compose.prod.yml --env-file .env up -d
 ```
 
 Check service status:
@@ -76,7 +76,7 @@ The database will be automatically initialized on first run via the backend's en
 ### Services
 
 1. **postgres**: PostgreSQL 15 database
-   - Data stored in `/mnt/user/appdata/roanes-kitchen/postgres`
+   - Data stored in `/mnt/user/appdata/kitchen/postgres`
    - Healthchecks enabled
    - Persistent storage
 
@@ -84,7 +84,7 @@ The database will be automatically initialized on first run via the backend's en
    - Python 3.11
    - Async PostgreSQL connection
    - Auto-restarts on failure
-   - Logs in `/mnt/user/appdata/roanes-kitchen/logs`
+   - Logs in `/mnt/user/appdata/kitchen/logs`
 
 3. **frontend**: React + Vite application
    - Multi-stage build (Node.js build → Nginx serve)
@@ -95,14 +95,14 @@ The database will be automatically initialized on first run via the backend's en
    - Runs daily at 2:00 AM
    - Compressed SQL dumps
    - 30-day retention (configurable)
-   - Backups in `/mnt/user/appdata/roanes-kitchen/backups`
+   - Backups in `/mnt/user/appdata/kitchen/backups`
 
 ### Volume Mappings
 
-All data is stored in `/mnt/user/appdata/roanes-kitchen/`:
+All data is stored in `/mnt/user/appdata/kitchen/`:
 
 ```
-/mnt/user/appdata/roanes-kitchen/
+/mnt/user/appdata/kitchen/
 ├── postgres/          # Database files
 ├── backups/           # SQL dump backups
 │   ├── roanes_kitchen_YYYYMMDD_HHMMSS.sql.gz
@@ -117,17 +117,17 @@ All data is stored in `/mnt/user/appdata/roanes-kitchen/`:
 Backups run automatically daily at 2:00 AM. Configuration:
 
 - **Schedule**: Daily at 2:00 AM (configured in `scripts/crontab`)
-- **Location**: `/mnt/user/appdata/roanes-kitchen/backups`
+- **Location**: `/mnt/user/appdata/kitchen/backups`
 - **Format**: Compressed SQL dumps (`roanes_kitchen_YYYYMMDD_HHMMSS.sql.gz`)
 - **Retention**: 30 days (configurable via `BACKUP_RETENTION_DAYS`)
-- **Logs**: `/mnt/user/appdata/roanes-kitchen/backups/backup.log`
+- **Logs**: `/mnt/user/appdata/kitchen/backups/backup.log`
 
 ### Manual Backup
 
 To manually trigger a backup:
 
 ```bash
-docker exec roanes-kitchen-backup /backup.sh
+docker exec kitchen-backup /backup.sh
 ```
 
 ### Restore from Backup
@@ -140,11 +140,11 @@ docker-compose -f docker-compose.prod.yml stop backend
 2. Restore the database:
 ```bash
 # Find the backup file you want to restore
-ls -lh /mnt/user/appdata/roanes-kitchen/backups/
+ls -lh /mnt/user/appdata/kitchen/backups/
 
 # Restore (replace YYYYMMDD_HHMMSS with your backup timestamp)
-gunzip -c /mnt/user/appdata/roanes-kitchen/backups/roanes_kitchen_YYYYMMDD_HHMMSS.sql.gz | \
-  docker exec -i roanes-kitchen-postgres psql -U admin -d roanes_kitchen
+gunzip -c /mnt/user/appdata/kitchen/backups/roanes_kitchen_YYYYMMDD_HHMMSS.sql.gz | \
+  docker exec -i kitchen-postgres psql -U admin -d roanes_kitchen
 ```
 
 3. Restart the backend:
@@ -168,22 +168,22 @@ docker-compose -f docker-compose.prod.yml logs -f backend
 
 Application logs:
 ```bash
-tail -f /mnt/user/appdata/roanes-kitchen/logs/*.log
+tail -f /mnt/user/appdata/kitchen/logs/*.log
 ```
 
 Backup logs:
 ```bash
-tail -f /mnt/user/appdata/roanes-kitchen/backups/backup.log
+tail -f /mnt/user/appdata/kitchen/backups/backup.log
 ```
 
 ### Updating the Application
 
 ```bash
-cd /mnt/user/appdata/roanes-kitchen
+cd /mnt/user/appdata/kitchen
 git pull
 docker-compose -f docker-compose.prod.yml down
 docker-compose -f docker-compose.prod.yml build
-docker-compose -f docker-compose.prod.yml --env-file .env.prod up -d
+docker-compose -f docker-compose.prod.yml --env-file .env up -d
 ```
 
 ### Restarting Services
@@ -228,12 +228,12 @@ docker-compose -f docker-compose.prod.yml ps postgres
 
 2. Check database connectivity:
 ```bash
-docker exec roanes-kitchen-postgres pg_isready -U admin -d roanes_kitchen
+docker exec kitchen-postgres pg_isready -U admin -d roanes_kitchen
 ```
 
 ### Frontend Can't Connect to Backend
 
-1. Check `VITE_API_URL` in `.env.prod`
+1. Check `VITE_API_URL` in `.env`
 2. Ensure backend is accessible on port 8000
 3. Check browser console for CORS errors
 
@@ -241,17 +241,17 @@ docker exec roanes-kitchen-postgres pg_isready -U admin -d roanes_kitchen
 
 1. Check cron is running in backup container:
 ```bash
-docker exec roanes-kitchen-backup ps aux | grep crond
+docker exec kitchen-backup ps aux | grep crond
 ```
 
 2. View backup logs:
 ```bash
-docker exec roanes-kitchen-backup cat /backups/backup.log
+docker exec kitchen-backup cat /backups/backup.log
 ```
 
 3. Manually test backup:
 ```bash
-docker exec roanes-kitchen-backup /backup.sh
+docker exec kitchen-backup /backup.sh
 ```
 
 ## Security Considerations
@@ -306,7 +306,7 @@ All services have health checks configured:
 
 Monitor with `docker stats`:
 ```bash
-docker stats roanes-kitchen-postgres roanes-kitchen-backend roanes-kitchen-frontend
+docker stats kitchen-postgres kitchen-backend kitchen-frontend
 ```
 
 ## Unraid-Specific Tips
@@ -333,5 +333,5 @@ Configure Unraid notifications for:
 
 For issues or questions:
 1. Check logs first: `docker-compose -f docker-compose.prod.yml logs`
-2. Verify all environment variables in `.env.prod`
+2. Verify all environment variables in `.env`
 3. Consult the main README.md for application-specific details

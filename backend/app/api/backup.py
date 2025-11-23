@@ -16,7 +16,7 @@ from app.core.config import get_settings
 
 router = APIRouter(prefix="/backup", tags=["backup"])
 
-BACKUP_DIR = Path("/tmp/roanes-kitchen-backups")
+BACKUP_DIR = Path("/tmp/kitchen-backups")
 BACKUP_DIR.mkdir(exist_ok=True)
 
 settings = get_settings()

@@ -105,17 +105,17 @@ git push origin v1.1.0
 ### 4. Verify Docker Images
 
 Check GitHub Actions completes successfully:
-- https://github.com/plongitudes/roanes-kitchen/actions
+- https://github.com/plongitudes/kitchen/actions
 
 Verify images published to Docker Hub:
-- `plongitudes/roanes-kitchen-backend:v1.1.0`
-- `plongitudes/roanes-kitchen-frontend:v1.1.0`
-- `plongitudes/roanes-kitchen-backend:1.1` (minor version tag)
-- `plongitudes/roanes-kitchen-backend:1` (major version tag)
+- `plongitudes/kitchen-backend:v1.1.0`
+- `plongitudes/kitchen-frontend:v1.1.0`
+- `plongitudes/kitchen-backend:1.1` (minor version tag)
+- `plongitudes/kitchen-backend:1` (major version tag)
 
 ### 5. Create GitHub Release
 
-1. Go to: https://github.com/plongitudes/roanes-kitchen/releases/new
+1. Go to: https://github.com/plongitudes/kitchen/releases/new
 2. Select tag: `v1.1.0`
 3. Title: `v1.1.0 - Meal Planning`
 4. Description: Copy from CHANGELOG.md
@@ -180,15 +180,15 @@ For production deployment, reference specific versions:
 ```yaml
 # docker-compose.prod.yml
 backend:
-  image: plongitudes/roanes-kitchen-backend:v1.1.0  # Specific version
+  image: plongitudes/kitchen-backend:v1.1.0  # Specific version
 
 # Or use floating tags (auto-updates):
 backend:
-  image: plongitudes/roanes-kitchen-backend:1.1  # Updates to 1.1.X
+  image: plongitudes/kitchen-backend:1.1  # Updates to 1.1.X
   # OR
-  image: plongitudes/roanes-kitchen-backend:1    # Updates to 1.X.X
+  image: plongitudes/kitchen-backend:1    # Updates to 1.X.X
   # OR
-  image: plongitudes/roanes-kitchen-backend:latest  # Latest release (risky)
+  image: plongitudes/kitchen-backend:latest  # Latest release (risky)
 ```
 
 **Recommendation:** Use specific version tags (`v1.1.0`) in production for stability.
