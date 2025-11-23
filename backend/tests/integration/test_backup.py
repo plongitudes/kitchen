@@ -1,8 +1,20 @@
-"""Integration tests for Backup API endpoints."""
+"""Integration tests for Backup API endpoints.
+
+Note: These tests require PostgreSQL (pg_dump/psql) and will be skipped
+when running against SQLite.
+"""
 import pytest
 from fastapi.testclient import TestClient
 from pathlib import Path
 import tempfile
+
+from tests.conftest import USING_SQLITE
+
+# Skip all backup tests when using SQLite - they require pg_dump/psql
+pytestmark = pytest.mark.skipif(
+    USING_SQLITE,
+    reason="Backup tests require PostgreSQL (pg_dump/psql)"
+)
 
 
 def test_create_backup(async_authenticated_client: TestClient):
