@@ -294,10 +294,6 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
 
 This project follows [Semantic Versioning](https://semver.org/). See [VERSIONING.md](.github/VERSIONING.md) for our versioning strategy.
 
-## Security
-
-For security vulnerabilities, please see our [Security Policy](SECURITY.md) or contact the maintainers directly.
-
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
