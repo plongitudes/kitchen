@@ -84,6 +84,7 @@ act-verbose.log
 # Cache directories
 .cache/
 *.cache
+node_modules/
 
 # Temporary files
 *.tmp
@@ -110,7 +111,7 @@ secrets.yml
 docs/_build/
 site/
 
-# AI shit
+# AI things
 .beads
 .claude
 reference_material/notion_export
