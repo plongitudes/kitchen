@@ -2,7 +2,7 @@
 
 > A meal planning and recipe management system designed to help you do better at adulting.
 
-[![Docker Build](https://github.com/plongitudes/roanes-kitchen/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/plongitudes/roanes-kitchen/actions/workflows/docker-publish.yml)
+[![Docker Build](https://github.com/plongitudes/kitchen/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/plongitudes/kitchen/actions/workflows/docker-publish.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Roane's Kitchen is a self-hosted meal planning and recipe management application that helps you organize weekly meal schedules, manage recipes, and receive Discord notifications for meal prep reminders.
@@ -23,8 +23,8 @@ Get up and running in 5 minutes:
 
 ```bash
 # Clone the repository
-git clone https://github.com/plongitudes/roanes-kitchen.git
-cd roanes-kitchen
+git clone https://github.com/plongitudes/kitchen.git
+cd kitchen
 
 # Start the services
 docker-compose up -d
@@ -32,8 +32,6 @@ docker-compose up -d
 # Access the application
 open http://localhost:5173
 ```
-
-Default credentials: `demo` / `demo123`
 
 ## Architecture
 
@@ -48,7 +46,7 @@ Roane's Kitchen consists of three main services:
 └─────────────┘     └─────────────┘     └──────────────┘
 ```
 
-- **Frontend**: React + TypeScript + Tailwind CSS (Vite dev server)
+- **Frontend**: React + Tailwind CSS (Vite dev server)
 - **Backend**: Python FastAPI with async SQLAlchemy
 - **Database**: PostgreSQL 15 with automated migrations (Alembic)
 
@@ -66,12 +64,11 @@ Roane's Kitchen consists of three main services:
 ### 1. Clone and Configure
 
 ```bash
-git clone https://github.com/plongitudes/roanes-kitchen.git
-cd roanes-kitchen
+git clone https://github.com/plongitudes/kitchen.git
+cd kitchen
 
-# Copy environment files
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
+# Copy environment file
+cp .env.example .env
 ```
 
 ### 2. Start Services
@@ -137,19 +134,20 @@ Create a `.env` file in the root directory:
 POSTGRES_PASSWORD=your-secure-password
 
 # Backend
-SECRET_KEY=your-secret-key-here
+JWT_SECRET_KEY=your-secret-key-here
 ENVIRONMENT=production
 
 # Discord (Optional)
 DISCORD_BOT_TOKEN=your-bot-token
-DISCORD_CHANNEL_ID=your-channel-id
+DISCORD_NOTIFICATION_CHANNEL_ID=your-channel-id
+DISCORD_TEST_CHANNEL_ID=your-test-channel-id
 
 # Ports
 BACKEND_PORT=8000
 FRONTEND_PORT=80
 
 # Unraid (Optional)
-APPDATA_PATH=/mnt/user/appdata/roanes-kitchen
+APPDATA_PATH=/mnt/user/appdata/kitchen
 ```
 
 ### Unraid Deployment
@@ -160,13 +158,13 @@ See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed Unraid setup instructions.
 
 Pre-built images are available on Docker Hub:
 
-- `plongitudes/roanes-kitchen-backend:latest`
-- `plongitudes/roanes-kitchen-frontend:latest`
+- `plongitudes/kitchen-backend:latest`
+- `plongitudes/kitchen-frontend:latest`
 
 Use version tags for production:
-- `plongitudes/roanes-kitchen-backend:v1.0.0`
-- `plongitudes/roanes-kitchen-backend:1.0`
-- `plongitudes/roanes-kitchen-backend:1`
+- `plongitudes/kitchen-backend:v1.0.0`
+- `plongitudes/kitchen-backend:1.0`
+- `plongitudes/kitchen-backend:1`
 
 ## Discord Notifications Setup
 
@@ -189,7 +187,8 @@ Use version tags for production:
 4. Update Environment Variables:
    ```env
    DISCORD_BOT_TOKEN=your-bot-token-here
-   DISCORD_CHANNEL_ID=your-channel-id-here
+   DISCORD_NOTIFICATION_CHANNEL_ID=your-channel-id-here
+   DISCORD_TEST_CHANNEL_ID=your-test-channel-id-here
    ```
 
 ## Backup and Restore
@@ -228,7 +227,7 @@ Interactive API documentation available at:
 ## Project Structure
 
 ```
-roanes-kitchen/
+kitchen/
 ├── backend/              # FastAPI backend
 │   ├── app/
 │   │   ├── api/         # API endpoints
@@ -271,7 +270,7 @@ To upgrade to a newer version:
 
 ```bash
 # 1. ALWAYS backup first
-docker exec roanes-kitchen-postgres pg_dump -U admin roanes_kitchen > backup.sql
+docker exec kitchen-postgres pg_dump -U admin roanes_kitchen > backup.sql
 
 # 2. Pull new version
 docker-compose -f docker-compose.prod.yml pull
@@ -306,8 +305,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/plongitudes/roanes-kitchen/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/plongitudes/roanes-kitchen/discussions)
+- **Issues**: [GitHub Issues](https://github.com/plongitudes/kitchen/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/plongitudes/kitchen/discussions)
 
 ---
 

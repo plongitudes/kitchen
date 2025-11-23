@@ -34,7 +34,8 @@ services:
       - ENVIRONMENT=production
       # Optional: Discord notifications
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
-      - DISCORD_CHANNEL_ID=${DISCORD_CHANNEL_ID:-}
+      - DISCORD_NOTIFICATION_CHANNEL_ID=${DISCORD_NOTIFICATION_CHANNEL_ID:-}
+      - DISCORD_TEST_CHANNEL_ID=${DISCORD_TEST_CHANNEL_ID:-}
     volumes:
       # Logs volume
       - ${APPDATA_PATH:-./data}/logs:/app/logs

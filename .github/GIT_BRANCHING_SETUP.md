@@ -6,7 +6,7 @@ This guide sets up the recommended branching strategy for production-ready deplo
 
 - `main` branch exists but is outdated (initial commits only)
 - `dev/phase-1` has all Phase 1 production-ready work
-- Remote: https://github.com/plongitudes/roanes-kitchen
+- Remote: https://github.com/plongitudes/kitchen
 
 ## Goal
 
@@ -34,7 +34,7 @@ git push origin main
 
 ### 2. Set Default Branch on GitHub
 
-1. Go to: https://github.com/plongitudes/roanes-kitchen/settings/branches
+1. Go to: https://github.com/plongitudes/kitchen/settings/branches
 2. Under "Default branch", click the switch icon
 3. Select `main` from dropdown
 4. Click "Update" and confirm

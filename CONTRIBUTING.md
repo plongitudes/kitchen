@@ -15,7 +15,7 @@ By participating in this project, you agree to:
 ### Reporting Bugs
 
 Before creating a bug report:
-- Check the [existing issues](https://github.com/plongitudes/roanes-kitchen/issues) to avoid duplicates
+- Check the [existing issues](https://github.com/plongitudes/kitchen/issues) to avoid duplicates
 - Try to reproduce the issue with the latest version
 
 When creating a bug report, include:
@@ -73,13 +73,13 @@ Feature requests are welcome! Please:
 
 1. Clone your fork:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/roanes-kitchen.git
-   cd roanes-kitchen
+   git clone https://github.com/YOUR_USERNAME/kitchen.git
+   cd kitchen
    ```
 
 2. Add upstream remote:
    ```bash
-   git remote add upstream https://github.com/plongitudes/roanes-kitchen.git
+   git remote add upstream https://github.com/plongitudes/kitchen.git
    ```
 
 3. Start development environment:
@@ -294,8 +294,8 @@ For maintainers only:
 
 ## Questions?
 
-- **General questions**: [GitHub Discussions](https://github.com/plongitudes/roanes-kitchen/discussions)
-- **Bug reports**: [GitHub Issues](https://github.com/plongitudes/roanes-kitchen/issues)
+- **General questions**: [GitHub Discussions](https://github.com/plongitudes/kitchen/discussions)
+- **Bug reports**: [GitHub Issues](https://github.com/plongitudes/kitchen/issues)
 - **Security issues**: See [SECURITY.md](SECURITY.md)
 
 ## License
