@@ -112,7 +112,7 @@ docs/_build/
 site/
 
 # AI things
-.beads
+.beads/
 .claude
 reference_material/notion_export
 AGENTS.md
