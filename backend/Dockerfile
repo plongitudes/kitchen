@@ -4,7 +4,7 @@ FROM python:3.11.10-slim AS builder
 WORKDIR /build
 
 # Install build dependencies
-RUN apt-get update && apt-get install -y \
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
@@ -18,7 +18,7 @@ FROM python:3.11.10-slim
 WORKDIR /app
 
 # Install only runtime system dependencies
-RUN apt-get update && apt-get install -y \
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     netcat-traditional \
     && rm -rf /var/lib/apt/lists/*
