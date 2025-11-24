@@ -48,13 +48,13 @@ services:
       start_period: 40s
     networks:
       - kitchen-network
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
 
   frontend:
     image: plongitudex/kitchen-frontend:latest
     container_name: kitchen-frontend
     environment:
-      - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
+      # API URL is injected at runtime (supports dynamic ports)
+      - API_URL=${API_URL:-http://localhost:8000}
     restart: unless-stopped
     ports:
       - "${FRONTEND_PORT:-80}:80"
@@ -97,8 +97,3 @@ services:
 networks:
   kitchen-network:
     driver: bridge
-
-volumes:
-  postgres_data:
-  backups:
-  logs:
