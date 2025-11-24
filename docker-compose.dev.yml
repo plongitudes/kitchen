@@ -1,0 +1,74 @@
+services:
+  postgres:
+    image: postgres:15.10-alpine
+    container_name: kitchen-postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: roanes_kitchen
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d roanes_kitchen"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: kitchen-backend
+    ports:
+      - "8000:8000"
+      - "5678:5678"  # debugpy port
+    environment:
+      # See .env.example for configuration - copy to .env and update values
+      - DATABASE_URL=postgresql+asyncpg://admin:${POSTGRES_PASSWORD:-changeme}@postgres:5432/roanes_kitchen
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-changeme}
+      - DEBUG=true
+      - ENVIRONMENT=development
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
+      - DISCORD_NOTIFICATION_CHANNEL_ID=${DISCORD_NOTIFICATION_CHANNEL_ID:-}
+      - DISCORD_TEST_CHANNEL_ID=${DISCORD_TEST_CHANNEL_ID:-}
+      - ENABLE_DEBUGPY=${ENABLE_DEBUGPY:-false}
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    image: node:22.11.0-alpine
+    container_name: kitchen-frontend
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5173"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    command: sh -c "npm install && npm run dev -- --host"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
