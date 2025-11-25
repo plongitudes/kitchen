@@ -7,17 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Test channel configuration for Discord notifications in development/staging environments
-
-### Fixed
-- Backup/restore operations now use database credentials from config instead of hardcoded values
-- Restore process automatically runs migrations to update schema after restoring old backups
-
-## [1.0.0] - 2025-11-20
+## [1.0.0] - 2025-11-25
 
 ### Added
 - Docker-based deployment with multi-stage builds
+- Test channel configuration for Discord notifications in development/staging environments
 - GitHub Actions CI/CD pipeline for automated Docker publishing
 - Health checks for all services (postgres, backend, frontend)
 - Database backup and restore API endpoints
@@ -38,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Discord notifications now display ingredient units correctly (e.g., "5 whole eggs" instead of "5 IngredientUnit.WHOLE eggs")
 - Improved exception handling in grocery service (replaced bare except clause)
+- Backup/restore operations now use database credentials from config instead of hardcoded values
+- Restore process automatically runs migrations to update schema after restoring old backups
 
 ### Security
 - Refactored backup/restore to use direct PostgreSQL connections instead of Docker socket
