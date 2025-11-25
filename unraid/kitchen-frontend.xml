@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>kitchen-frontend</Name>
+  <Repository>plongitudex/kitchen-frontend:latest</Repository>
+  <Registry>https://hub.docker.com/r/plongitudex/kitchen-frontend</Registry>
+  <Network>kitchen-network</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/plongitudes/kitchen/issues</Support>
+  <Project>https://github.com/plongitudes/kitchen</Project>
+  <Overview>Kitchen - Modern meal planning and recipe management application with Discord notifications.&#xD;
+&#xD;
+SETUP INSTRUCTIONS (Install in this order):&#xD;
+1. Create network: docker network create kitchen-network&#xD;
+2. Install and start: kitchen-postgres&#xD;
+3. Install and start: kitchen-backend (configure all required environment variables)&#xD;
+4. Install and start: kitchen-frontend (this container)&#xD;
+&#xD;
+FEATURES:&#xD;
+- Recipe management with automatic import from URLs&#xD;
+- Meal planning with rotating weekly templates&#xD;
+- Automatic grocery list generation&#xD;
+- Discord notifications for meal plans&#xD;
+- Ingredient normalization and mapping&#xD;
+- Multi-user support with authentication&#xD;
+&#xD;
+After starting all three containers, access the web interface at http://[IP]:[PORT]&#xD;
+&#xD;
+Default demo user (if backend is in development mode):&#xD;
+  Username: demo&#xD;
+  Password: demo1234</Overview>
+  <Category>Tools: Status:Stable</Category>
+  <WebUI>http://[IP]:[PORT:80]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/plongitudes/kitchen/main/unraid/kitchen-frontend.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/plongitudes/kitchen/main/.github/kitchen-icon.png</Icon>
+  <ExtraParams>--network=kitchen-network --health-cmd="curl -f http://localhost:80" --health-interval=30s --health-timeout=10s --health-retries=3 --health-start-period=10s</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires>kitchen-postgres and kitchen-backend must be running first!</Requires>
+  <Config Name="Web UI Port" Target="80" Default="8080" Mode="tcp" Description="Web interface port" Type="Port" Display="always" Required="true" Mask="false">8080</Config>
+  <Config Name="Backend API URL" Target="API_URL" Default="http://[IP]:8000" Mode="" Description="Backend API URL - MUST match your backend container! Format: http://[IP]:[BACKEND_PORT] or http://localhost:8000 if on same host" Type="Variable" Display="always" Required="true" Mask="false">http://localhost:8000</Config>
+</Container>

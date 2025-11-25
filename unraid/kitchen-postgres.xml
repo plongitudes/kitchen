@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>kitchen-postgres</Name>
+  <Repository>postgres:15.10-alpine</Repository>
+  <Registry>https://hub.docker.com/_/postgres</Registry>
+  <Network>kitchen-network</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/plongitudes/kitchen/issues</Support>
+  <Project>https://github.com/plongitudes/kitchen</Project>
+  <Overview>PostgreSQL database for Kitchen application. This container must be started FIRST before the backend and frontend containers.&#xD;
+&#xD;
+IMPORTANT: Create the kitchen-network before starting:&#xD;
+docker network create kitchen-network&#xD;
+&#xD;
+This is an internal database service with no web interface.</Overview>
+  <Category>Tools: Status:Stable</Category>
+  <Icon>https://raw.githubusercontent.com/docker-library/docs/master/postgres/logo.png</Icon>
+  <ExtraParams>--network=kitchen-network --health-cmd="pg_isready -U admin -d roanes_kitchen" --health-interval=30s --health-timeout=5s --health-retries=5</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires>Create network first: docker network create kitchen-network</Requires>
+  <Config Name="PostgreSQL User" Target="POSTGRES_USER" Default="admin" Mode="" Description="Database admin username" Type="Variable" Display="always" Required="true" Mask="false">admin</Config>
+  <Config Name="PostgreSQL Password" Target="POSTGRES_PASSWORD" Default="" Mode="" Description="Database admin password - MUST match POSTGRES_PASSWORD in kitchen-backend!" Type="Variable" Display="always" Required="true" Mask="true"></Config>
+  <Config Name="PostgreSQL Database" Target="POSTGRES_DB" Default="roanes_kitchen" Mode="" Description="Database name" Type="Variable" Display="always" Required="true" Mask="false">roanes_kitchen</Config>
+  <Config Name="Database Data" Target="/var/lib/postgresql/data" Default="/mnt/user/appdata/kitchen/postgres" Mode="rw" Description="PostgreSQL data storage" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/kitchen/postgres</Config>
+</Container>
