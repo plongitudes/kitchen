@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { mealPlanAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import { formatLocalDate, getDayName as getLocalDayName } from '../utils/dateUtils';
 
 const MealPlanDetail = () => {
   const { isDark } = useTheme();
@@ -29,22 +30,15 @@ const MealPlanDetail = () => {
     }
   };
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
+  // Use utilities for date-only strings to avoid UTC timezone shifts
+  const formatDate = (dateString) => formatLocalDate(dateString, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  });
 
-  const getDayName = (dateString) => {
-    // Parse date as local time to avoid timezone shifts
-    const [year, month, day] = dateString.split('-').map(Number);
-    const date = new Date(year, month - 1, day);
-    return date.toLocaleDateString('en-US', { weekday: 'long' });
-  };
+  const getDayName = (dateString) => getLocalDayName(dateString);
 
   const groupAssignmentsByDate = (assignments) => {
     const grouped = {};
@@ -137,11 +131,7 @@ const MealPlanDetail = () => {
                 <h3 className={`font-semibold mb-3 ${
                   isDark ? 'text-gruvbox-dark-yellow-bright' : 'text-gruvbox-light-yellow-bright'
                 }`}>
-                  {getDayName(date)} - {(() => {
-                    const [year, month, day] = date.split('-').map(Number);
-                    const d = new Date(year, month - 1, day);
-                    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                  })()}
+                  {getDayName(date)} - {formatLocalDate(date, { month: 'short', day: 'numeric', year: undefined })}
                 </h3>
 
                 {dayAssignments.length === 0 ? (

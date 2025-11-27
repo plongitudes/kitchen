@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { mealPlanAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import { formatLocalDate } from '../utils/dateUtils';
 
 const GroceryListAll = () => {
   const { isDark } = useTheme();
@@ -27,16 +28,15 @@ const GroceryListAll = () => {
     }
   };
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
+  // Use utility for date-only strings (shopping_date) to avoid UTC timezone shifts
+  const formatDate = (dateString) => formatLocalDate(dateString, {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
 
+  // formatDateTime is for full datetime strings (generated_at) - native Date is fine
   const formatDateTime = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
