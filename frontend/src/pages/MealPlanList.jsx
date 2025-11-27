@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { mealPlanAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import { formatLocalDate } from '../utils/dateUtils';
 import Toast from '../components/Toast';
 import ConfirmDialog from '../components/ConfirmDialog';
 
@@ -34,10 +35,8 @@ const MealPlanList = () => {
     }
   };
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
+  // Use utility for date-only strings to avoid UTC timezone shifts
+  const formatDate = (dateString) => formatLocalDate(dateString);
 
   const handleStartWeek = async () => {
     // Get sequence ID from URL or latest meal plan

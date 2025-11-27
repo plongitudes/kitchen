@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { mealPlanAPI, recipeAPI, authAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import { parseLocalDate, formatLocalDate, isToday as checkIsToday } from '../utils/dateUtils';
 import Toast from '../components/Toast';
 import ConfirmDialog from '../components/ConfirmDialog';
 
@@ -82,10 +83,8 @@ const MealPlanCurrent = () => {
     }
   };
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
+  // Use utility for date-only strings to avoid UTC timezone shifts
+  const formatDate = (dateString) => formatLocalDate(dateString);
 
   const handleEditClick = (date, assignment) => {
     setEditingDate(date);
@@ -250,10 +249,9 @@ const MealPlanCurrent = () => {
             const assignments = assignmentsByDate[date];
             const dayAssignment = assignments[0];
             // Parse date as local time to avoid timezone shifts
-            const [year, month, day] = date.split('-').map(Number);
-            const dateObj = new Date(year, month - 1, day);
+            const dateObj = parseLocalDate(date);
             const dayName = dayNames[dateObj.getDay()];
-            const isToday = new Date().toDateString() === dateObj.toDateString();
+            const dateIsToday = checkIsToday(date);
 
             const isModified = dayAssignment.is_modified;
             const isEditing = editingDate === date;
@@ -266,7 +264,7 @@ const MealPlanCurrent = () => {
                     ? 'border-l-4 border-l-gruvbox-dark-orange-bright'
                     : ''
                 } ${
-                  isToday
+                  dateIsToday
                     ? isDark
                       ? 'border-gruvbox-dark-orange bg-gruvbox-dark-bg-soft'
                       : 'border-gruvbox-light-orange bg-gruvbox-light-bg-soft'
@@ -288,7 +286,7 @@ const MealPlanCurrent = () => {
                       isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'
                     }`}>
                       {dayName}
-                      {isToday && (
+                      {dateIsToday && (
                         <span className={`ml-2 text-xs px-2 py-1 rounded ${
                           isDark
                             ? 'bg-gruvbox-dark-orange text-gruvbox-dark-bg'
