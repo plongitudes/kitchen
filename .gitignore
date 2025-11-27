@@ -1,4 +1,5 @@
 # Database files
+data/
 *.db
 *.db-journal
 *.db-shm
