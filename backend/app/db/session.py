@@ -8,11 +8,14 @@ settings = get_settings()
 # Create async engine
 # Note: ssl=False is needed for asyncpg in Docker internal networking
 # SQLAlchemy URL params don't correctly pass ssl=False to asyncpg
+# Only apply for PostgreSQL (not SQLite used in tests)
+connect_args = {"ssl": False} if "postgresql" in settings.database_url else {}
+
 engine = create_async_engine(
     settings.database_url,
     echo=settings.debug,
     future=True,
-    connect_args={"ssl": False},
+    connect_args=connect_args,
 )
 
 # Create async session factory
