@@ -15,27 +15,24 @@ from app.models.meal_plan import MealPlanInstance, GroceryList
 from app.models.settings import Settings
 
 
-@pytest.mark.asyncio
 class TestSchedulerConfiguration:
     """Test scheduler configuration."""
 
-    async def test_configure_scheduler_adds_jobs(self):
+    def test_configure_scheduler_adds_jobs(self):
         """Test that configure_scheduler adds expected jobs."""
-        from app.services.scheduler_service import scheduler, configure_scheduler
+        with patch("app.services.scheduler_service.scheduler") as mock_scheduler:
+            mock_scheduler.add_job = MagicMock()
 
-        # Clear any existing jobs
-        scheduler.remove_all_jobs()
+            from app.services.scheduler_service import configure_scheduler
+            configure_scheduler()
 
-        configure_scheduler()
+            # Verify jobs were added
+            assert mock_scheduler.add_job.call_count == 2
 
-        job_ids = [job.id for job in scheduler.get_jobs()]
-        assert "notification_check" in job_ids
-        assert "week_advancement" in job_ids
-
-        # Clean up and shutdown to avoid event loop issues
-        scheduler.remove_all_jobs()
-        if scheduler.running:
-            scheduler.shutdown(wait=False)
+            # Check job IDs
+            call_args = [call.kwargs.get("id") for call in mock_scheduler.add_job.call_args_list]
+            assert "notification_check" in call_args
+            assert "week_advancement" in call_args
 
 
 @pytest.mark.asyncio
