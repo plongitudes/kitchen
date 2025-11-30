@@ -19,7 +19,7 @@ from app.models.settings import Settings
 class TestSchedulerConfiguration:
     """Test scheduler configuration."""
 
-    def test_configure_scheduler_adds_jobs(self):
+    async def test_configure_scheduler_adds_jobs(self):
         """Test that configure_scheduler adds expected jobs."""
         from app.services.scheduler_service import scheduler, configure_scheduler
 
@@ -32,8 +32,10 @@ class TestSchedulerConfiguration:
         assert "notification_check" in job_ids
         assert "week_advancement" in job_ids
 
-        # Clean up
+        # Clean up and shutdown to avoid event loop issues
         scheduler.remove_all_jobs()
+        if scheduler.running:
+            scheduler.shutdown(wait=False)
 
 
 @pytest.mark.asyncio
