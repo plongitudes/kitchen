@@ -18,8 +18,9 @@ fi
 
 echo "Starting application..."
 # Use --reload for development, multiple workers for production
+# --loop asyncio bypasses uvloop which has DNS issues in some Docker environments
 if [ "$ENVIRONMENT" = "development" ]; then
-  exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+  exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --loop asyncio
 else
-  exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+  exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2 --loop asyncio
 fi
