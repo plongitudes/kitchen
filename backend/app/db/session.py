@@ -6,10 +6,13 @@ from app.core.config import get_settings
 settings = get_settings()
 
 # Create async engine
+# Note: ssl=False is needed for asyncpg in Docker internal networking
+# SQLAlchemy URL params don't correctly pass ssl=False to asyncpg
 engine = create_async_engine(
     settings.database_url,
     echo=settings.debug,
     future=True,
+    connect_args={"ssl": False},
 )
 
 # Create async session factory
