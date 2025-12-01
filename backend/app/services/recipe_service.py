@@ -9,12 +9,12 @@ from uuid import UUID
 from datetime import datetime
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, delete
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 from recipe_scrapers import scrape_me, scrape_html, WebsiteNotImplementedError
 
-from app.models.recipe import Recipe, RecipeIngredient, RecipeInstruction
+from app.models.recipe import Recipe, RecipeIngredient, RecipeInstruction, RecipePrepStep, PrepStepIngredient
 from app.models.ingredient import CommonIngredient, IngredientAlias
 from app.models.schedule import WeekDayAssignment
 from app.schemas.recipe import (
@@ -24,6 +24,9 @@ from app.schemas.recipe import (
     RecipeIngredientUpdate,
     RecipeInstructionCreate,
     RecipeInstructionUpdate,
+    RecipePrepStepCreate,
+    RecipePrepStepUpdate,
+    RecipePrepStepResponse,
     RecipeImportPreviewResponse,
     RecipeImportPreviewIngredient,
     RecipeImportPreviewInstruction,
@@ -88,6 +91,7 @@ class RecipeService:
         query = select(Recipe).options(
             selectinload(Recipe.ingredients),
             selectinload(Recipe.instructions),
+            selectinload(Recipe.prep_steps).selectinload(RecipePrepStep.ingredient_links),
         )
 
         # Filter by owner
@@ -112,13 +116,14 @@ class RecipeService:
         db: AsyncSession,
         recipe_id: UUID,
     ) -> Optional[Recipe]:
-        """Get a single recipe by ID with ingredients and instructions."""
+        """Get a single recipe by ID with ingredients, instructions, and prep steps."""
         query = (
             select(Recipe)
             .where(Recipe.id == recipe_id)
             .options(
                 selectinload(Recipe.ingredients),
                 selectinload(Recipe.instructions),
+                selectinload(Recipe.prep_steps).selectinload(RecipePrepStep.ingredient_links),
             )
         )
 
@@ -177,6 +182,45 @@ class RecipeService:
                     duration_minutes=inst_data.duration_minutes,
                 )
                 db.add(instruction)
+
+        await db.flush()  # Ensure ingredients have IDs
+
+        # Create prep steps with ingredient links
+        if recipe_data.prep_steps:
+            # Query ingredients we just created to build order -> id mapping
+            ing_query = select(RecipeIngredient).where(RecipeIngredient.recipe_id == recipe.id)
+            ing_result = await db.execute(ing_query)
+            created_ingredients = ing_result.scalars().all()
+
+            ingredient_by_order = {}
+            for ing in created_ingredients:
+                ingredient_by_order[ing.order] = ing.id
+
+            for prep_data in recipe_data.prep_steps:
+                prep_step = RecipePrepStep(
+                    recipe_id=recipe.id,
+                    description=prep_data.description,
+                    order=prep_data.order,
+                )
+                db.add(prep_step)
+                await db.flush()  # Get prep_step.id
+
+                # Link to ingredients - support both ingredient_orders and ingredient_ids
+                ingredient_ids_to_link = []
+                if prep_data.ingredient_orders:
+                    # Map order values to actual ingredient IDs
+                    for order in prep_data.ingredient_orders:
+                        if order in ingredient_by_order:
+                            ingredient_ids_to_link.append(ingredient_by_order[order])
+                elif prep_data.ingredient_ids:
+                    ingredient_ids_to_link = prep_data.ingredient_ids
+
+                for ing_id in ingredient_ids_to_link:
+                    link = PrepStepIngredient(
+                        prep_step_id=prep_step.id,
+                        recipe_ingredient_id=ing_id,
+                    )
+                    db.add(link)
 
         await db.commit()
         await db.refresh(recipe)
@@ -258,11 +302,59 @@ class RecipeService:
                 )
                 db.add(instruction)
 
+        # Handle prep steps replacement if provided
+        if recipe_data.prep_steps is not None:
+            # Delete existing prep steps (cascade deletes links)
+            for prep_step in recipe.prep_steps:
+                await db.delete(prep_step)
+            await db.flush()
+
+            # Build ingredient order -> id mapping for new ingredient references
+            ing_query = select(RecipeIngredient).where(RecipeIngredient.recipe_id == recipe.id)
+            ing_result = await db.execute(ing_query)
+            current_ingredients = ing_result.scalars().all()
+
+            ingredient_by_order = {}
+            ingredient_ids_set = set()
+            for ing in current_ingredients:
+                ingredient_by_order[ing.order] = ing.id
+                ingredient_ids_set.add(ing.id)
+
+            # Add new prep steps
+            for prep_data in recipe_data.prep_steps:
+                prep_step = RecipePrepStep(
+                    recipe_id=recipe.id,
+                    description=prep_data.description,
+                    order=prep_data.order,
+                )
+                db.add(prep_step)
+                await db.flush()
+
+                # Link to ingredients
+                ingredient_ids_to_link = []
+                if prep_data.ingredient_orders:
+                    for order in prep_data.ingredient_orders:
+                        if order in ingredient_by_order:
+                            ingredient_ids_to_link.append(ingredient_by_order[order])
+                elif prep_data.ingredient_ids:
+                    # Validate that ingredient IDs belong to this recipe
+                    ingredient_ids_to_link = [
+                        ing_id for ing_id in prep_data.ingredient_ids
+                        if ing_id in ingredient_ids_set
+                    ]
+
+                for ing_id in ingredient_ids_to_link:
+                    link = PrepStepIngredient(
+                        prep_step_id=prep_step.id,
+                        recipe_ingredient_id=ing_id,
+                    )
+                    db.add(link)
+
         await db.commit()
         await db.refresh(recipe)
 
-        # Reload with relationships if ingredients/instructions were updated
-        if recipe_data.ingredients is not None or recipe_data.instructions is not None:
+        # Reload with relationships if any nested data was updated
+        if recipe_data.ingredients is not None or recipe_data.instructions is not None or recipe_data.prep_steps is not None:
             recipe = await RecipeService.get_recipe_by_id(db=db, recipe_id=recipe.id)
 
         return recipe
@@ -569,6 +661,159 @@ class RecipeService:
             )
 
         await db.delete(instruction)
+        await db.commit()
+
+    # ========================================================================
+    # Prep Step Methods
+    # ========================================================================
+
+    @staticmethod
+    async def get_prep_steps(
+        db: AsyncSession,
+        recipe_id: UUID,
+    ) -> List[RecipePrepStep]:
+        """Get all prep steps for a recipe."""
+        query = (
+            select(RecipePrepStep)
+            .where(RecipePrepStep.recipe_id == recipe_id)
+            .options(selectinload(RecipePrepStep.ingredient_links))
+            .order_by(RecipePrepStep.order)
+        )
+
+        result = await db.execute(query)
+        return result.scalars().all()
+
+    @staticmethod
+    async def create_prep_step(
+        db: AsyncSession,
+        recipe_id: UUID,
+        prep_step_data: RecipePrepStepCreate,
+    ) -> RecipePrepStep:
+        """Add a prep step to a recipe."""
+        # Verify recipe exists
+        recipe = await RecipeService.get_recipe_by_id(db=db, recipe_id=recipe_id)
+        if not recipe:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Recipe not found",
+            )
+
+        prep_step = RecipePrepStep(
+            recipe_id=recipe_id,
+            description=prep_step_data.description,
+            order=prep_step_data.order,
+        )
+
+        db.add(prep_step)
+        await db.flush()
+
+        # Build ingredient ID set for validation
+        ingredient_ids_set = {ing.id for ing in recipe.ingredients}
+
+        # Link to ingredients
+        ingredient_ids_to_link = []
+        if prep_step_data.ingredient_orders:
+            ingredient_by_order = {ing.order: ing.id for ing in recipe.ingredients}
+            for order in prep_step_data.ingredient_orders:
+                if order in ingredient_by_order:
+                    ingredient_ids_to_link.append(ingredient_by_order[order])
+        elif prep_step_data.ingredient_ids:
+            ingredient_ids_to_link = [
+                ing_id for ing_id in prep_step_data.ingredient_ids
+                if ing_id in ingredient_ids_set
+            ]
+
+        for ing_id in ingredient_ids_to_link:
+            link = PrepStepIngredient(
+                prep_step_id=prep_step.id,
+                recipe_ingredient_id=ing_id,
+            )
+            db.add(link)
+
+        await db.commit()
+
+        # Reload with relationships
+        query = (
+            select(RecipePrepStep)
+            .where(RecipePrepStep.id == prep_step.id)
+            .options(selectinload(RecipePrepStep.ingredient_links))
+        )
+        result = await db.execute(query)
+        return result.scalar_one()
+
+    @staticmethod
+    async def update_prep_step(
+        db: AsyncSession,
+        prep_step_id: UUID,
+        prep_step_data: RecipePrepStepUpdate,
+    ) -> RecipePrepStep:
+        """Update a recipe prep step."""
+        query = (
+            select(RecipePrepStep)
+            .where(RecipePrepStep.id == prep_step_id)
+            .options(selectinload(RecipePrepStep.ingredient_links))
+        )
+        result = await db.execute(query)
+        prep_step = result.scalar_one_or_none()
+
+        if not prep_step:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Prep step not found",
+            )
+
+        # Update fields
+        if prep_step_data.description is not None:
+            prep_step.description = prep_step_data.description
+        if prep_step_data.order is not None:
+            prep_step.order = prep_step_data.order
+
+        # Update ingredient links if provided
+        if prep_step_data.ingredient_ids is not None:
+            # Delete existing links using bulk delete
+            await db.execute(
+                delete(PrepStepIngredient).where(
+                    PrepStepIngredient.prep_step_id == prep_step.id
+                )
+            )
+            await db.flush()
+
+            # Get recipe to validate ingredient IDs
+            recipe = await RecipeService.get_recipe_by_id(db=db, recipe_id=prep_step.recipe_id)
+            ingredient_ids_set = {ing.id for ing in recipe.ingredients}
+
+            # Add new links
+            for ing_id in prep_step_data.ingredient_ids:
+                if ing_id in ingredient_ids_set:
+                    link = PrepStepIngredient(
+                        prep_step_id=prep_step.id,
+                        recipe_ingredient_id=ing_id,
+                    )
+                    db.add(link)
+
+        await db.commit()
+
+        # Refresh the prep_step object to get fresh relationship data
+        await db.refresh(prep_step, ["ingredient_links"])
+        return prep_step
+
+    @staticmethod
+    async def delete_prep_step(
+        db: AsyncSession,
+        prep_step_id: UUID,
+    ) -> None:
+        """Delete a recipe prep step."""
+        query = select(RecipePrepStep).where(RecipePrepStep.id == prep_step_id)
+        result = await db.execute(query)
+        prep_step = result.scalar_one_or_none()
+
+        if not prep_step:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Prep step not found",
+            )
+
+        await db.delete(prep_step)
         await db.commit()
 
     # ========================================================================

@@ -25,7 +25,7 @@ from typing import Optional, List, Tuple
 from uuid import uuid4, UUID
 
 from app.models.user import User
-from app.models.recipe import Recipe, RecipeIngredient, RecipeInstruction, IngredientUnit
+from app.models.recipe import Recipe, RecipeIngredient, RecipeInstruction, RecipePrepStep, PrepStepIngredient, IngredientUnit
 from app.models.schedule import (
     ScheduleSequence,
     WeekTemplate,
@@ -256,6 +256,44 @@ class RecipeInstructionFactory:
             description=description,
             duration_minutes=duration_minutes,
             depends_on_step_id=depends_on_step_id,
+        )
+
+
+class RecipePrepStepFactory:
+    """Factory for creating RecipePrepStep instances."""
+
+    @classmethod
+    def build(
+        cls,
+        id: Optional[UUID] = None,
+        recipe_id: Optional[UUID] = None,
+        description: str = "Prep step",
+        order: int = 0,
+    ) -> RecipePrepStep:
+        """Build a RecipePrepStep instance."""
+        return RecipePrepStep(
+            id=id or uuid4(),
+            recipe_id=recipe_id or uuid4(),
+            description=description,
+            order=order,
+        )
+
+
+class PrepStepIngredientFactory:
+    """Factory for creating PrepStepIngredient instances."""
+
+    @classmethod
+    def build(
+        cls,
+        id: Optional[UUID] = None,
+        prep_step_id: Optional[UUID] = None,
+        recipe_ingredient_id: Optional[UUID] = None,
+    ) -> PrepStepIngredient:
+        """Build a PrepStepIngredient instance."""
+        return PrepStepIngredient(
+            id=id or uuid4(),
+            prep_step_id=prep_step_id or uuid4(),
+            recipe_ingredient_id=recipe_ingredient_id or uuid4(),
         )
 
 

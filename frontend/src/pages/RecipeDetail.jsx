@@ -294,6 +294,53 @@ const RecipeDetail = () => {
         </div>
       )}
 
+      {/* Prep Steps */}
+      {recipe.prep_steps && recipe.prep_steps.length > 0 && (
+        <div className={`p-6 rounded-lg border mb-6 ${
+          isDark
+            ? 'bg-gruvbox-dark-bg-soft border-gruvbox-dark-gray'
+            : 'bg-gruvbox-light-bg-soft border-gruvbox-light-gray'
+        }`}>
+          <h2 className={`text-2xl font-semibold mb-4 ${
+            isDark ? 'text-gruvbox-dark-purple-bright' : 'text-gruvbox-light-purple-bright'
+          }`}>
+            Prep Steps
+          </h2>
+          <ol className="space-y-3">
+            {recipe.prep_steps
+              .sort((a, b) => a.order - b.order)
+              .map((ps) => {
+                // Find linked ingredients by matching ingredient_ids to recipe ingredients
+                const linkedIngredients = ps.ingredient_ids
+                  ?.map(id => recipe.ingredients?.find(ing => ing.id === id))
+                  .filter(Boolean) || [];
+
+                return (
+                  <li key={ps.id} className="flex gap-3">
+                    <span className={`font-bold ${
+                      isDark ? 'text-gruvbox-dark-purple' : 'text-gruvbox-light-purple'
+                    }`}>
+                      {ps.order + 1}.
+                    </span>
+                    <div className="flex-1">
+                      <p className={isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'}>
+                        {ps.description}
+                      </p>
+                      {linkedIngredients.length > 0 && (
+                        <p className={`text-sm mt-1 ${
+                          isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'
+                        }`}>
+                          → {linkedIngredients.map(ing => ing.ingredient_name).join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+          </ol>
+        </div>
+      )}
+
       {/* Instructions */}
       {recipe.instructions && recipe.instructions.length > 0 && (
         <div className={`p-6 rounded-lg border mb-6 ${

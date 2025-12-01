@@ -70,30 +70,6 @@ services:
     networks:
       - kitchen-network
 
-  # Backup service requires local scripts - use API endpoints instead
-  # Or manually configure by copying scripts to your server
-  # backup:
-  #   image: postgres:15.10-alpine
-  #   container_name: kitchen-backup
-  #   restart: unless-stopped
-  #   environment:
-  #     POSTGRES_USER: admin
-  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin}
-  #     POSTGRES_DB: roanes_kitchen
-  #     POSTGRES_HOST: postgres
-  #     BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
-  #   volumes:
-  #     - ${APPDATA_PATH:-./data}/backups:/backups
-  #     - ./scripts/backup.sh:/backup.sh:ro
-  #     - ./scripts/crontab:/etc/crontabs/root:ro
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #   networks:
-  #     - kitchen-network
-  #   entrypoint: /bin/sh
-  #   command: -c "chmod +x /backup.sh && crond -f -l 2"
-
 networks:
   kitchen-network:
     driver: bridge

@@ -26,6 +26,7 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
     source_url: '',
     ingredients: [],
     instructions: [],
+    prep_steps: [],
   });
 
   useEffect(() => {
@@ -41,6 +42,7 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
         source_url: initialData.source_url || '',
         ingredients: (initialData.ingredients || []).sort((a, b) => a.order - b.order),
         instructions: (initialData.instructions || []).sort((a, b) => a.step_number - b.step_number),
+        prep_steps: (initialData.prep_steps || []).sort((a, b) => a.order - b.order),
       });
     }
   }, [initialData]);
@@ -80,6 +82,11 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
           step_number: inst.step_number,
           description: inst.description,
           duration_minutes: inst.duration_minutes ? parseInt(inst.duration_minutes) : null,
+        })),
+        prep_steps: formData.prep_steps.map(ps => ({
+          description: ps.description,
+          order: ps.order,
+          ingredient_orders: ps.ingredient_orders || [],
         })),
       };
 
@@ -291,6 +298,48 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
     });
 
     setFormData({ ...formData, instructions: updated });
+  };
+
+  // Prep Step Management
+  const addPrepStep = () => {
+    const newIndex = formData.prep_steps.length;
+    setFormData({
+      ...formData,
+      prep_steps: [
+        ...formData.prep_steps,
+        {
+          description: '',
+          order: newIndex,
+          ingredient_orders: [],
+        },
+      ],
+    });
+  };
+
+  const updatePrepStep = (index, field, value) => {
+    const updated = [...formData.prep_steps];
+    updated[index] = { ...updated[index], [field]: value };
+    setFormData({ ...formData, prep_steps: updated });
+  };
+
+  const removePrepStep = (index) => {
+    const updated = formData.prep_steps.filter((_, i) => i !== index);
+    // Re-index the order
+    updated.forEach((ps, i) => {
+      ps.order = i;
+    });
+    setFormData({ ...formData, prep_steps: updated });
+  };
+
+  const toggleIngredientForPrepStep = (prepStepIndex, ingredientOrder) => {
+    const updated = [...formData.prep_steps];
+    const currentOrders = updated[prepStepIndex].ingredient_orders || [];
+    if (currentOrders.includes(ingredientOrder)) {
+      updated[prepStepIndex].ingredient_orders = currentOrders.filter(o => o !== ingredientOrder);
+    } else {
+      updated[prepStepIndex].ingredient_orders = [...currentOrders, ingredientOrder];
+    }
+    setFormData({ ...formData, prep_steps: updated });
   };
 
   const handleDragStart = (e, index) => {
@@ -533,6 +582,74 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
                   className="w-full p-2 rounded bg-gruvbox-dark-bg border border-gruvbox-dark-gray text-gruvbox-dark-fg focus:outline-none focus:border-gruvbox-dark-orange-bright text-sm"
                   placeholder="Prep note (optional, e.g., '1-inch cubed', 'finely chopped')"
                 />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Prep Steps */}
+      <div className="bg-gruvbox-dark-bg-soft p-6 rounded-lg border border-gruvbox-dark-gray mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold text-gruvbox-dark-purple-bright">
+            Prep Steps
+          </h2>
+          <button
+            type="button"
+            onClick={addPrepStep}
+            className="px-3 py-1 bg-gruvbox-dark-purple hover:bg-gruvbox-dark-purple-bright rounded transition"
+          >
+            + Add
+          </button>
+        </div>
+
+        {formData.prep_steps.length === 0 ? (
+          <p className="text-gruvbox-dark-gray">No prep steps yet. Add steps like "dice the onions" or "mince the garlic".</p>
+        ) : (
+          <div className="space-y-4">
+            {formData.prep_steps.map((ps, index) => (
+              <div key={index} className="p-3 bg-gruvbox-dark-bg rounded border border-gruvbox-dark-gray">
+                <div className="flex gap-2 mb-2">
+                  <span className="w-8 p-2 text-center text-gruvbox-dark-gray">
+                    {index + 1}.
+                  </span>
+                  <input
+                    type="text"
+                    value={ps.description}
+                    onChange={(e) => updatePrepStep(index, 'description', e.target.value)}
+                    className="flex-1 p-2 rounded bg-gruvbox-dark-bg-soft border border-gruvbox-dark-gray text-gruvbox-dark-fg focus:outline-none focus:border-gruvbox-dark-purple-bright"
+                    placeholder="e.g., Slice thinly, Dice into 1-inch cubes"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removePrepStep(index)}
+                    className="px-3 py-2 bg-gruvbox-dark-red hover:bg-gruvbox-dark-red-bright rounded transition"
+                  >
+                    ×
+                  </button>
+                </div>
+                {formData.ingredients.length > 0 && (
+                  <div className="ml-10">
+                    <p className="text-sm text-gruvbox-dark-gray mb-2">Link to ingredients:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.ingredients.map((ing, ingIndex) => (
+                        <button
+                          key={ingIndex}
+                          type="button"
+                          onClick={() => toggleIngredientForPrepStep(index, ing.order)}
+                          className={`px-2 py-1 text-sm rounded transition ${
+                            (ps.ingredient_orders || []).includes(ing.order)
+                              ? 'bg-gruvbox-dark-purple text-gruvbox-dark-fg'
+                              : 'bg-gruvbox-dark-bg-soft text-gruvbox-dark-gray hover:bg-gruvbox-dark-gray'
+                          }`}
+                        >
+                          {ing.ingredient_name || `Ingredient ${ingIndex + 1}`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
