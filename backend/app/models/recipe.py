@@ -84,6 +84,11 @@ class Recipe(Base):
         back_populates="recipe",
         cascade="all, delete-orphan",
     )
+    prep_steps = relationship(
+        "RecipePrepStep",
+        back_populates="recipe",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self):
         return f"<Recipe {self.name}>"
@@ -152,3 +157,58 @@ class RecipeInstruction(Base):
 
     def __repr__(self):
         return f"<RecipeInstruction {self.step_number}>"
+
+
+class RecipePrepStep(Base):
+    """Prep step that can be tied to one or more ingredients."""
+
+    __tablename__ = "recipe_prep_steps"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    recipe_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("recipes.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    description = Column(String, nullable=False)  # e.g., "Slice thinly" or "Dice into 1-inch cubes"
+    order = Column(Integer, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    # Relationships
+    recipe = relationship("Recipe", back_populates="prep_steps")
+    ingredient_links = relationship(
+        "PrepStepIngredient",
+        back_populates="prep_step",
+        cascade="all, delete-orphan",
+    )
+
+    def __repr__(self):
+        return f"<RecipePrepStep {self.order}: {self.description[:30]}>"
+
+
+class PrepStepIngredient(Base):
+    """Junction table linking prep steps to ingredients."""
+
+    __tablename__ = "prep_step_ingredients"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    prep_step_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("recipe_prep_steps.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    recipe_ingredient_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("recipe_ingredients.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # Relationships
+    prep_step = relationship("RecipePrepStep", back_populates="ingredient_links")
+    ingredient = relationship("RecipeIngredient")
+
+    def __repr__(self):
+        return f"<PrepStepIngredient {self.prep_step_id} -> {self.recipe_ingredient_id}>"

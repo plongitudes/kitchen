@@ -29,6 +29,9 @@ from app.schemas.recipe import (
     RecipeInstructionResponse,
     RecipeInstructionCreate,
     RecipeInstructionUpdate,
+    RecipePrepStepResponse,
+    RecipePrepStepCreate,
+    RecipePrepStepUpdate,
     RecipeImportRequest,
     RecipeImportPreviewResponse,
 )
@@ -589,6 +592,77 @@ async def delete_recipe_instruction(
 
 
 # ============================================================================
+# Prep Step Endpoints
+# ============================================================================
+
+
+@router.get("/{recipe_id}/prep-steps", response_model=List[RecipePrepStepResponse])
+async def list_recipe_prep_steps(
+    recipe_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get all prep steps for a recipe."""
+    prep_steps = await RecipeService.get_prep_steps(db=db, recipe_id=recipe_id)
+    return [RecipePrepStepResponse.from_model(ps) for ps in prep_steps]
+
+
+@router.post(
+    "/{recipe_id}/prep-steps",
+    response_model=RecipePrepStepResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_recipe_prep_step(
+    recipe_id: UUID,
+    prep_step_data: RecipePrepStepCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Add a prep step to a recipe."""
+    prep_step = await RecipeService.create_prep_step(
+        db=db,
+        recipe_id=recipe_id,
+        prep_step_data=prep_step_data,
+    )
+    return RecipePrepStepResponse.from_model(prep_step)
+
+
+@router.put(
+    "/{recipe_id}/prep-steps/{prep_step_id}",
+    response_model=RecipePrepStepResponse,
+)
+async def update_recipe_prep_step(
+    recipe_id: UUID,
+    prep_step_id: UUID,
+    prep_step_data: RecipePrepStepUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update a recipe prep step."""
+    prep_step = await RecipeService.update_prep_step(
+        db=db,
+        prep_step_id=prep_step_id,
+        prep_step_data=prep_step_data,
+    )
+    return RecipePrepStepResponse.from_model(prep_step)
+
+
+@router.delete(
+    "/{recipe_id}/prep-steps/{prep_step_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_recipe_prep_step(
+    recipe_id: UUID,
+    prep_step_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Remove a prep step from a recipe."""
+    await RecipeService.delete_prep_step(db=db, prep_step_id=prep_step_id)
+    return None
+
+
+# ============================================================================
 # Recipe Export/Import (JSON)
 # ============================================================================
 
@@ -600,7 +674,7 @@ async def export_recipe_json(
     current_user: User = Depends(get_current_user),
 ):
     """Export a recipe as JSON file."""
-    recipe = await RecipeService.get_recipe(db=db, recipe_id=recipe_id)
+    recipe = await RecipeService.get_recipe_by_id(db=db, recipe_id=recipe_id)
 
     if not recipe:
         raise HTTPException(

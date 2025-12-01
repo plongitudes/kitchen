@@ -606,6 +606,287 @@ class TestRecipeInstructions:
         assert instructions[0]["id"] != instruction_id
 
 
+class TestRecipePrepSteps:
+    """Test prep step management."""
+
+    @pytest.fixture
+    def recipe_with_ingredients_and_prep_steps(self, async_authenticated_client: TestClient):
+        """Create a recipe with ingredients and prep steps for testing."""
+        response = async_authenticated_client.post(
+            "/recipes",
+            json={
+                "name": "Test Recipe with Prep",
+                "recipe_type": "dinner",
+                "cook_time_minutes": 20,
+                "ingredients": [
+                    {
+                        "ingredient_name": "Onion",
+                        "quantity": 1,
+                        "unit": "whole",
+                        "order": 0,
+                    },
+                    {
+                        "ingredient_name": "Garlic",
+                        "quantity": 3,
+                        "unit": "clove",
+                        "order": 1,
+                    },
+                    {
+                        "ingredient_name": "Tomatoes",
+                        "quantity": 2,
+                        "unit": "whole",
+                        "order": 2,
+                    },
+                ],
+                "instructions": [],
+                "prep_steps": [
+                    {
+                        "description": "Dice the onion",
+                        "order": 0,
+                        "ingredient_orders": [0],
+                    },
+                    {
+                        "description": "Mince the garlic",
+                        "order": 1,
+                        "ingredient_orders": [1],
+                    },
+                ],
+            },
+        )
+        return response.json()
+
+    def test_create_recipe_with_prep_steps(
+        self,
+        async_authenticated_client: TestClient,
+    ):
+        """Test creating a recipe with prep steps linked to ingredients."""
+        response = async_authenticated_client.post(
+            "/recipes",
+            json={
+                "name": "Recipe with Prep Steps",
+                "recipe_type": "dinner",
+                "cook_time_minutes": 30,
+                "ingredients": [
+                    {
+                        "ingredient_name": "Cabbage",
+                        "quantity": 1,
+                        "unit": "whole",
+                        "order": 0,
+                    },
+                    {
+                        "ingredient_name": "Carrots",
+                        "quantity": 2,
+                        "unit": "whole",
+                        "order": 1,
+                    },
+                ],
+                "instructions": [
+                    {"step_number": 1, "description": "Cook everything"},
+                ],
+                "prep_steps": [
+                    {
+                        "description": "Slice the cabbage thinly",
+                        "order": 0,
+                        "ingredient_orders": [0],
+                    },
+                    {
+                        "description": "Julienne the carrots",
+                        "order": 1,
+                        "ingredient_orders": [1],
+                    },
+                ],
+            },
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+
+        # Verify prep steps were created
+        assert len(data["prep_steps"]) == 2
+        assert data["prep_steps"][0]["description"] == "Slice the cabbage thinly"
+        assert data["prep_steps"][1]["description"] == "Julienne the carrots"
+
+        # Verify ingredient links (ingredient_ids should be populated)
+        assert len(data["prep_steps"][0]["ingredient_ids"]) == 1
+        assert len(data["prep_steps"][1]["ingredient_ids"]) == 1
+
+    def test_create_recipe_with_prep_step_multiple_ingredients(
+        self,
+        async_authenticated_client: TestClient,
+    ):
+        """Test creating a prep step that links to multiple ingredients."""
+        response = async_authenticated_client.post(
+            "/recipes",
+            json={
+                "name": "Recipe with Multi-Ingredient Prep",
+                "recipe_type": "dinner",
+                "cook_time_minutes": 25,
+                "ingredients": [
+                    {"ingredient_name": "Onion", "quantity": 1, "unit": "whole", "order": 0},
+                    {"ingredient_name": "Garlic", "quantity": 3, "unit": "clove", "order": 1},
+                    {"ingredient_name": "Peppers", "quantity": 2, "unit": "whole", "order": 2},
+                ],
+                "instructions": [],
+                "prep_steps": [
+                    {
+                        "description": "Dice the aromatics",
+                        "order": 0,
+                        "ingredient_orders": [0, 1],  # Links to both onion and garlic
+                    },
+                ],
+            },
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+
+        # Prep step should link to 2 ingredients
+        assert len(data["prep_steps"]) == 1
+        assert len(data["prep_steps"][0]["ingredient_ids"]) == 2
+
+    def test_list_prep_steps(
+        self,
+        async_authenticated_client: TestClient,
+        recipe_with_ingredients_and_prep_steps: dict,
+    ):
+        """Test listing prep steps for a recipe."""
+        recipe_id = recipe_with_ingredients_and_prep_steps["id"]
+
+        response = async_authenticated_client.get(f"/recipes/{recipe_id}/prep-steps")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 2
+        assert data[0]["description"] == "Dice the onion"
+        assert data[1]["description"] == "Mince the garlic"
+
+    def test_add_prep_step(
+        self,
+        async_authenticated_client: TestClient,
+        recipe_with_ingredients_and_prep_steps: dict,
+    ):
+        """Test adding a prep step to a recipe."""
+        recipe_id = recipe_with_ingredients_and_prep_steps["id"]
+        tomato_id = recipe_with_ingredients_and_prep_steps["ingredients"][2]["id"]
+
+        response = async_authenticated_client.post(
+            f"/recipes/{recipe_id}/prep-steps",
+            json={
+                "description": "Chop the tomatoes",
+                "order": 2,
+                "ingredient_ids": [tomato_id],
+            },
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["description"] == "Chop the tomatoes"
+        assert data["order"] == 2
+        assert tomato_id in data["ingredient_ids"]
+
+        # Verify it appears in the list
+        list_response = async_authenticated_client.get(f"/recipes/{recipe_id}/prep-steps")
+        prep_steps = list_response.json()
+        assert len(prep_steps) == 3
+
+    def test_update_prep_step(
+        self,
+        async_authenticated_client: TestClient,
+        recipe_with_ingredients_and_prep_steps: dict,
+    ):
+        """Test updating a prep step."""
+        recipe_id = recipe_with_ingredients_and_prep_steps["id"]
+        prep_step_id = recipe_with_ingredients_and_prep_steps["prep_steps"][0]["id"]
+
+        response = async_authenticated_client.put(
+            f"/recipes/{recipe_id}/prep-steps/{prep_step_id}",
+            json={
+                "description": "Finely dice the onion",
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["description"] == "Finely dice the onion"
+        # Order should remain unchanged
+        assert data["order"] == 0
+
+    def test_update_prep_step_change_ingredients(
+        self,
+        async_authenticated_client: TestClient,
+        recipe_with_ingredients_and_prep_steps: dict,
+    ):
+        """Test updating prep step to link to different ingredients."""
+        recipe_id = recipe_with_ingredients_and_prep_steps["id"]
+        prep_step_id = recipe_with_ingredients_and_prep_steps["prep_steps"][0]["id"]
+        garlic_id = recipe_with_ingredients_and_prep_steps["ingredients"][1]["id"]
+        tomato_id = recipe_with_ingredients_and_prep_steps["ingredients"][2]["id"]
+
+        response = async_authenticated_client.put(
+            f"/recipes/{recipe_id}/prep-steps/{prep_step_id}",
+            json={
+                "ingredient_ids": [garlic_id, tomato_id],
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["ingredient_ids"]) == 2
+        assert garlic_id in data["ingredient_ids"]
+        assert tomato_id in data["ingredient_ids"]
+
+    def test_delete_prep_step(
+        self,
+        async_authenticated_client: TestClient,
+        recipe_with_ingredients_and_prep_steps: dict,
+    ):
+        """Test deleting a prep step."""
+        recipe_id = recipe_with_ingredients_and_prep_steps["id"]
+        prep_step_id = recipe_with_ingredients_and_prep_steps["prep_steps"][0]["id"]
+
+        response = async_authenticated_client.delete(
+            f"/recipes/{recipe_id}/prep-steps/{prep_step_id}"
+        )
+
+        assert response.status_code == 204
+
+        # Verify it's removed from the list
+        list_response = async_authenticated_client.get(f"/recipes/{recipe_id}/prep-steps")
+        prep_steps = list_response.json()
+        assert len(prep_steps) == 1
+        assert prep_steps[0]["id"] != prep_step_id
+
+    def test_update_recipe_replaces_prep_steps(
+        self,
+        async_authenticated_client: TestClient,
+        recipe_with_ingredients_and_prep_steps: dict,
+    ):
+        """Test that updating recipe with prep_steps replaces all existing prep steps."""
+        recipe_id = recipe_with_ingredients_and_prep_steps["id"]
+
+        response = async_authenticated_client.put(
+            f"/recipes/{recipe_id}",
+            json={
+                "prep_steps": [
+                    {
+                        "description": "New prep step",
+                        "order": 0,
+                        "ingredient_orders": [0, 1, 2],
+                    },
+                ],
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Should have only the new prep step
+        assert len(data["prep_steps"]) == 1
+        assert data["prep_steps"][0]["description"] == "New prep step"
+        # Should link to all 3 ingredients
+        assert len(data["prep_steps"][0]["ingredient_ids"]) == 3
+
+
 class TestRecipeUsage:
     """Test recipe usage checking."""
 

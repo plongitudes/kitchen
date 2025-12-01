@@ -117,6 +117,84 @@ class RecipeInstructionResponse(RecipeInstructionBase):
 
 
 # ============================================================================
+# Prep Step Schemas
+# ============================================================================
+
+
+class PrepStepIngredientBase(BaseModel):
+    """Base schema for linking prep steps to ingredients."""
+
+    recipe_ingredient_id: UUID
+
+
+class PrepStepIngredientCreate(PrepStepIngredientBase):
+    """Schema for creating a prep step ingredient link."""
+
+    pass
+
+
+class PrepStepIngredientResponse(PrepStepIngredientBase):
+    """Schema for prep step ingredient link response."""
+
+    id: UUID
+
+    class Config:
+        from_attributes = True
+
+
+class RecipePrepStepBase(BaseModel):
+    """Base schema for recipe prep steps."""
+
+    description: str = Field(..., min_length=1)
+    order: int = Field(..., ge=0)
+
+
+class RecipePrepStepCreate(RecipePrepStepBase):
+    """Schema for creating a recipe prep step.
+
+    Use ingredient_ids when adding to an existing recipe (you know the UUIDs).
+    Use ingredient_orders when creating with a new recipe (references by position).
+    """
+
+    ingredient_ids: List[UUID] = []  # For existing recipes - actual ingredient UUIDs
+    ingredient_orders: List[int] = []  # For new recipes - ingredient positions (0-indexed)
+
+
+class RecipePrepStepUpdate(BaseModel):
+    """Schema for updating a recipe prep step."""
+
+    description: Optional[str] = Field(None, min_length=1)
+    order: Optional[int] = Field(None, ge=0)
+    ingredient_ids: Optional[List[UUID]] = None  # Replace linked ingredients
+
+
+class RecipePrepStepResponse(BaseModel):
+    """Schema for recipe prep step response."""
+
+    id: UUID
+    recipe_id: UUID
+    description: str
+    order: int
+    ingredient_ids: List[UUID] = []
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+    @classmethod
+    def from_model(cls, prep_step) -> "RecipePrepStepResponse":
+        """Convert from SQLAlchemy model to response schema."""
+        return cls(
+            id=prep_step.id,
+            recipe_id=prep_step.recipe_id,
+            description=prep_step.description,
+            order=prep_step.order,
+            ingredient_ids=[link.recipe_ingredient_id for link in prep_step.ingredient_links],
+            created_at=prep_step.created_at,
+        )
+
+
+# ============================================================================
 # Recipe Schemas
 # ============================================================================
 
@@ -135,10 +213,11 @@ class RecipeBase(BaseModel):
 
 
 class RecipeCreate(RecipeBase):
-    """Schema for creating a recipe with ingredients and instructions."""
+    """Schema for creating a recipe with ingredients, instructions, and prep steps."""
 
     ingredients: Optional[List[RecipeIngredientCreate]] = []
     instructions: Optional[List[RecipeInstructionCreate]] = []
+    prep_steps: Optional[List[RecipePrepStepCreate]] = []
 
 
 class RecipeUpdate(BaseModel):
@@ -155,6 +234,7 @@ class RecipeUpdate(BaseModel):
     owner_id: Optional[UUID] = None  # For owner reassignment
     ingredients: Optional[List[RecipeIngredientCreate]] = None
     instructions: Optional[List[RecipeInstructionCreate]] = None
+    prep_steps: Optional[List[RecipePrepStepCreate]] = None
 
 
 class RecipeResponse(RecipeBase):
@@ -171,13 +251,39 @@ class RecipeResponse(RecipeBase):
 
 
 class RecipeDetailResponse(RecipeResponse):
-    """Schema for detailed recipe response with ingredients and instructions."""
+    """Schema for detailed recipe response with ingredients, instructions, and prep steps."""
 
     ingredients: List[RecipeIngredientResponse] = []
     instructions: List[RecipeInstructionResponse] = []
+    prep_steps: List[RecipePrepStepResponse] = []
 
     class Config:
         from_attributes = True
+
+    @field_validator("prep_steps", mode="before")
+    @classmethod
+    def convert_prep_steps(cls, v):
+        """Convert prep_steps from model format (with ingredient_links) to response format."""
+        if not v:
+            return []
+        # If already RecipePrepStepResponse objects, return as-is
+        if v and isinstance(v[0], RecipePrepStepResponse):
+            return v
+        # Convert from model objects
+        result = []
+        for ps in v:
+            if hasattr(ps, "ingredient_links"):
+                result.append(RecipePrepStepResponse(
+                    id=ps.id,
+                    recipe_id=ps.recipe_id,
+                    description=ps.description,
+                    order=ps.order,
+                    ingredient_ids=[link.recipe_ingredient_id for link in ps.ingredient_links],
+                    created_at=ps.created_at,
+                ))
+            else:
+                result.append(ps)
+        return result
 
 
 class RecipeUsageResponse(BaseModel):

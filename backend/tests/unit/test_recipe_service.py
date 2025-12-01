@@ -3,14 +3,15 @@ Unit tests for RecipeService.
 
 Tests cover:
 - get_recipes: listing with filters (owner, type, retired)
-- get_recipe_by_id: fetching with ingredients/instructions
-- create_recipe: creating recipes with ingredients and instructions
-- update_recipe: updating fields and replacing ingredients/instructions
+- get_recipe_by_id: fetching with ingredients/instructions/prep_steps
+- create_recipe: creating recipes with ingredients, instructions, and prep_steps
+- update_recipe: updating fields and replacing ingredients/instructions/prep_steps
 - delete_recipe: soft delete with usage validation
 - restore_recipe: undeleting retired recipes
 - check_recipe_usage: finding templates using a recipe
 - Ingredient CRUD: get, create, update, delete
 - Instruction CRUD: get, create, update, delete
+- Prep Step CRUD: get, create, update, delete
 """
 
 import pytest
@@ -26,12 +27,16 @@ from app.schemas.recipe import (
     RecipeIngredientUpdate,
     RecipeInstructionCreate,
     RecipeInstructionUpdate,
+    RecipePrepStepCreate,
+    RecipePrepStepUpdate,
 )
 from tests.factories import (
     UserFactory,
     RecipeFactory,
     RecipeIngredientFactory,
     RecipeInstructionFactory,
+    RecipePrepStepFactory,
+    PrepStepIngredientFactory,
     WeekTemplateFactory,
     WeekDayAssignmentFactory,
     CommonIngredientFactory,
@@ -801,3 +806,260 @@ class TestFindCommonIngredient:
         result = await RecipeService.find_common_ingredient(async_db_session, "nonexistent")
 
         assert result is None
+
+
+@pytest.mark.asyncio
+class TestPrepStepCRUD:
+    """Test prep step CRUD operations."""
+
+    async def test_get_prep_steps(self, async_db_session, async_test_user):
+        """Test getting prep steps for a recipe."""
+        recipe = RecipeFactory.build(owner_id=async_test_user.id, name="Recipe")
+        async_db_session.add(recipe)
+        await async_db_session.flush()
+
+        ps1 = RecipePrepStepFactory.build(recipe_id=recipe.id, description="Dice onion", order=0)
+        ps2 = RecipePrepStepFactory.build(recipe_id=recipe.id, description="Mince garlic", order=1)
+        async_db_session.add(ps1)
+        async_db_session.add(ps2)
+        await async_db_session.commit()
+
+        result = await RecipeService.get_prep_steps(async_db_session, recipe.id)
+
+        assert len(result) == 2
+        assert result[0].description == "Dice onion"
+        assert result[1].description == "Mince garlic"
+
+    async def test_create_prep_step(self, async_db_session, async_test_user):
+        """Test adding a prep step to a recipe."""
+        recipe = RecipeFactory.build(owner_id=async_test_user.id, name="Recipe")
+        async_db_session.add(recipe)
+        await async_db_session.flush()
+
+        ingredient = RecipeIngredientFactory.build(recipe_id=recipe.id, ingredient_name="Onion", order=0)
+        async_db_session.add(ingredient)
+        await async_db_session.commit()
+
+        prep_step_data = RecipePrepStepCreate(
+            description="Slice the onion",
+            order=0,
+            ingredient_ids=[ingredient.id],
+        )
+
+        result = await RecipeService.create_prep_step(async_db_session, recipe.id, prep_step_data)
+
+        assert result is not None
+        assert result.description == "Slice the onion"
+        assert len(result.ingredient_links) == 1
+        assert result.ingredient_links[0].recipe_ingredient_id == ingredient.id
+
+    async def test_create_prep_step_raises_for_missing_recipe(self, async_db_session):
+        """Test that HTTPException is raised when recipe doesn't exist."""
+        fake_id = uuid4()
+        prep_step_data = RecipePrepStepCreate(
+            description="Do something",
+            order=0,
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await RecipeService.create_prep_step(async_db_session, fake_id, prep_step_data)
+
+        assert exc_info.value.status_code == 404
+
+    async def test_create_prep_step_with_ingredient_orders(self, async_db_session, async_test_user):
+        """Test creating a prep step using ingredient_orders instead of ingredient_ids."""
+        recipe = RecipeFactory.build(owner_id=async_test_user.id, name="Recipe")
+        async_db_session.add(recipe)
+        await async_db_session.flush()
+
+        ing1 = RecipeIngredientFactory.build(recipe_id=recipe.id, ingredient_name="Onion", order=0)
+        ing2 = RecipeIngredientFactory.build(recipe_id=recipe.id, ingredient_name="Garlic", order=1)
+        async_db_session.add(ing1)
+        async_db_session.add(ing2)
+        await async_db_session.commit()
+
+        prep_step_data = RecipePrepStepCreate(
+            description="Dice the aromatics",
+            order=0,
+            ingredient_orders=[0, 1],  # Reference by order, not by ID
+        )
+
+        result = await RecipeService.create_prep_step(async_db_session, recipe.id, prep_step_data)
+
+        assert result is not None
+        assert len(result.ingredient_links) == 2
+
+    async def test_update_prep_step(self, async_db_session, async_test_user):
+        """Test updating a prep step."""
+        recipe = RecipeFactory.build(owner_id=async_test_user.id, name="Recipe")
+        async_db_session.add(recipe)
+        await async_db_session.flush()
+
+        prep_step = RecipePrepStepFactory.build(
+            recipe_id=recipe.id,
+            description="Original",
+            order=0,
+        )
+        async_db_session.add(prep_step)
+        await async_db_session.commit()
+
+        update_data = RecipePrepStepUpdate(description="Updated description")
+        result = await RecipeService.update_prep_step(async_db_session, prep_step.id, update_data)
+
+        assert result.description == "Updated description"
+        assert result.order == 0  # Unchanged
+
+    async def test_update_prep_step_change_ingredients(self, async_db_session, async_test_user):
+        """Test updating a prep step to change its ingredient links."""
+        # Create recipe with ingredients using the service (proper relationship setup)
+        recipe_data = RecipeCreate(
+            name="Recipe",
+            recipe_type="dinner",
+            ingredients=[
+                RecipeIngredientCreate(ingredient_name="Onion", quantity=1.0, unit="whole", order=0),
+                RecipeIngredientCreate(ingredient_name="Garlic", quantity=3.0, unit="clove", order=1),
+            ],
+            instructions=[],
+            prep_steps=[
+                RecipePrepStepCreate(description="Prep step", order=0, ingredient_orders=[0]),
+            ],
+        )
+        recipe = await RecipeService.create_recipe(async_db_session, recipe_data, async_test_user.id)
+
+        # Get the prep step and ingredient IDs
+        prep_step_id = recipe.prep_steps[0].id
+        ing2_id = recipe.ingredients[1].id
+
+        # Update to link to second ingredient instead
+        update_data = RecipePrepStepUpdate(ingredient_ids=[ing2_id])
+        result = await RecipeService.update_prep_step(async_db_session, prep_step_id, update_data)
+
+        assert len(result.ingredient_links) == 1
+        assert result.ingredient_links[0].recipe_ingredient_id == ing2_id
+
+    async def test_update_prep_step_raises_for_missing(self, async_db_session):
+        """Test that HTTPException is raised when prep step doesn't exist."""
+        fake_id = uuid4()
+        update_data = RecipePrepStepUpdate(description="Whatever")
+
+        with pytest.raises(HTTPException) as exc_info:
+            await RecipeService.update_prep_step(async_db_session, fake_id, update_data)
+
+        assert exc_info.value.status_code == 404
+
+    async def test_delete_prep_step(self, async_db_session, async_test_user):
+        """Test deleting a prep step."""
+        recipe = RecipeFactory.build(owner_id=async_test_user.id, name="Recipe")
+        async_db_session.add(recipe)
+        await async_db_session.flush()
+
+        prep_step = RecipePrepStepFactory.build(recipe_id=recipe.id, description="ToDelete")
+        async_db_session.add(prep_step)
+        await async_db_session.commit()
+        prep_step_id = prep_step.id
+
+        await RecipeService.delete_prep_step(async_db_session, prep_step_id)
+
+        # Verify it's gone
+        result = await RecipeService.get_prep_steps(async_db_session, recipe.id)
+        assert len(result) == 0
+
+    async def test_delete_prep_step_raises_for_missing(self, async_db_session):
+        """Test that HTTPException is raised when prep step doesn't exist."""
+        fake_id = uuid4()
+
+        with pytest.raises(HTTPException) as exc_info:
+            await RecipeService.delete_prep_step(async_db_session, fake_id)
+
+        assert exc_info.value.status_code == 404
+
+
+@pytest.mark.asyncio
+class TestCreateRecipeWithPrepSteps:
+    """Test creating recipes with prep steps."""
+
+    async def test_creates_recipe_with_prep_steps(self, async_db_session, async_test_user):
+        """Test creating a recipe with prep steps linked to ingredients."""
+        recipe_data = RecipeCreate(
+            name="Recipe with Prep Steps",
+            recipe_type="dinner",
+            ingredients=[
+                RecipeIngredientCreate(ingredient_name="Onion", quantity=1.0, unit="whole", order=0),
+                RecipeIngredientCreate(ingredient_name="Garlic", quantity=3.0, unit="clove", order=1),
+            ],
+            instructions=[],
+            prep_steps=[
+                RecipePrepStepCreate(description="Dice the onion", order=0, ingredient_orders=[0]),
+                RecipePrepStepCreate(description="Mince the garlic", order=1, ingredient_orders=[1]),
+            ],
+        )
+
+        result = await RecipeService.create_recipe(async_db_session, recipe_data, async_test_user.id)
+
+        assert result is not None
+        assert len(result.prep_steps) == 2
+        assert result.prep_steps[0].description == "Dice the onion"
+        assert result.prep_steps[1].description == "Mince the garlic"
+        # Each prep step should link to one ingredient
+        assert len(result.prep_steps[0].ingredient_links) == 1
+        assert len(result.prep_steps[1].ingredient_links) == 1
+
+    async def test_creates_recipe_with_prep_step_multiple_ingredients(self, async_db_session, async_test_user):
+        """Test creating a prep step that links to multiple ingredients."""
+        recipe_data = RecipeCreate(
+            name="Recipe with Multi-Ingredient Prep",
+            recipe_type="dinner",
+            ingredients=[
+                RecipeIngredientCreate(ingredient_name="Onion", quantity=1.0, unit="whole", order=0),
+                RecipeIngredientCreate(ingredient_name="Garlic", quantity=3.0, unit="clove", order=1),
+            ],
+            instructions=[],
+            prep_steps=[
+                RecipePrepStepCreate(description="Dice the aromatics", order=0, ingredient_orders=[0, 1]),
+            ],
+        )
+
+        result = await RecipeService.create_recipe(async_db_session, recipe_data, async_test_user.id)
+
+        assert result is not None
+        assert len(result.prep_steps) == 1
+        assert len(result.prep_steps[0].ingredient_links) == 2
+
+
+@pytest.mark.asyncio
+class TestUpdateRecipeWithPrepSteps:
+    """Test updating recipes with prep steps."""
+
+    async def test_replaces_prep_steps(self, async_db_session, async_test_user):
+        """Test that updating prep_steps replaces all existing ones."""
+        recipe = RecipeFactory.build(owner_id=async_test_user.id, name="Recipe to Update")
+        async_db_session.add(recipe)
+        await async_db_session.flush()
+
+        ingredient = RecipeIngredientFactory.build(
+            recipe_id=recipe.id,
+            ingredient_name="Onion",
+            order=0,
+        )
+        async_db_session.add(ingredient)
+        await async_db_session.flush()
+
+        old_prep_step = RecipePrepStepFactory.build(
+            recipe_id=recipe.id,
+            description="Old prep step",
+            order=0,
+        )
+        async_db_session.add(old_prep_step)
+        await async_db_session.commit()
+
+        update_data = RecipeUpdate(
+            prep_steps=[
+                RecipePrepStepCreate(description="New prep step", order=0, ingredient_orders=[0]),
+            ]
+        )
+
+        result = await RecipeService.update_recipe(async_db_session, recipe.id, update_data)
+
+        assert result is not None
+        assert len(result.prep_steps) == 1
+        assert result.prep_steps[0].description == "New prep step"
