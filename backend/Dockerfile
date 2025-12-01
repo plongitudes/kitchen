@@ -30,7 +30,8 @@ RUN useradd -m -u 1000 appuser && \
 # Copy pre-built wheels from builder stage and install
 COPY --from=builder /wheels /wheels
 RUN pip install --no-cache /wheels/* && \
-    rm -rf /wheels
+    rm -rf /wheels && \
+    pip uninstall -y uvloop || true
 
 # Copy entrypoint script
 COPY --chown=appuser:appuser entrypoint.sh /entrypoint.sh
