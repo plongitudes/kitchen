@@ -1,4 +1,14 @@
-from sqlalchemy import Column, String, Integer, Float, Text, DateTime, ForeignKey, Enum as SQLEnum
+from sqlalchemy import (
+    Column,
+    String,
+    Integer,
+    Float,
+    Text,
+    DateTime,
+    ForeignKey,
+    Enum as SQLEnum,
+    Index,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -109,8 +119,7 @@ class RecipeIngredient(Base):
     ingredient_name = Column(String, nullable=False)
     quantity = Column(Float, nullable=True)
     unit: Column[IngredientUnit] = Column(
-        SQLEnum(IngredientUnit, values_callable=lambda x: [e.value for e in x]),
-        nullable=True
+        SQLEnum(IngredientUnit, values_callable=lambda x: [e.value for e in x]), nullable=True
     )
     order = Column(Integer, nullable=False)
     common_ingredient_id = Column(
@@ -125,6 +134,11 @@ class RecipeIngredient(Base):
     # Relationships
     recipe = relationship("Recipe", back_populates="ingredients")
     common_ingredient = relationship("CommonIngredient")
+    prep_step_links = relationship(
+        "PrepStepIngredient",
+        foreign_keys="[PrepStepIngredient.recipe_ingredient_id]",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self):
         return f"<RecipeIngredient {self.quantity} {self.unit} {self.ingredient_name}>"
@@ -163,6 +177,10 @@ class RecipePrepStep(Base):
     """Prep step that can be tied to one or more ingredients."""
 
     __tablename__ = "recipe_prep_steps"
+    __table_args__ = (
+        # Composite index for efficient prep step lookups by recipe and description
+        Index("ix_recipe_prep_steps_recipe_id_description", "recipe_id", "description"),
+    )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     recipe_id = Column(

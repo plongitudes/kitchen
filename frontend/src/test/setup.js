@@ -42,3 +42,6 @@ const localStorageMock = {
 
 // eslint-disable-next-line no-undef
 global.localStorage = localStorageMock;
+
+// Mock Element.scrollIntoView
+Element.prototype.scrollIntoView = () => {};

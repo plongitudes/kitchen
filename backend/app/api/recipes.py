@@ -148,12 +148,12 @@ async def export_all_recipes_json(
 
     # Create JSON file in memory
     json_str = json.dumps(export_data, indent=2, ensure_ascii=False)
-    json_bytes = json_str.encode('utf-8')
+    json_bytes = json_str.encode("utf-8")
 
     return StreamingResponse(
         io.BytesIO(json_bytes),
         media_type="application/json",
-        headers={"Content-Disposition": 'attachment; filename="all_recipes.json"'}
+        headers={"Content-Disposition": 'attachment; filename="all_recipes.json"'},
     )
 
 
@@ -164,16 +164,15 @@ async def import_recipe_json(
     current_user: User = Depends(get_current_user),
 ):
     """Import a recipe from JSON file."""
-    if not file.filename.endswith('.json'):
+    if not file.filename.endswith(".json"):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only .json files are allowed"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Only .json files are allowed"
         )
 
     try:
         # Read and parse JSON
         content = await file.read()
-        recipe_data = json.loads(content.decode('utf-8'))
+        recipe_data = json.loads(content.decode("utf-8"))
 
         # Validate required fields
         required_fields = ["name", "ingredients", "instructions"]
@@ -181,7 +180,7 @@ async def import_recipe_json(
             if field not in recipe_data:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Missing required field: {field}"
+                    detail=f"Missing required field: {field}",
                 )
 
         # Create recipe
@@ -194,12 +193,8 @@ async def import_recipe_json(
             prep_notes=recipe_data.get("prep_notes"),
             postmortem_notes=recipe_data.get("postmortem_notes"),
             source_url=recipe_data.get("source_url"),
-            ingredients=[
-                RecipeIngredientCreate(**ing) for ing in recipe_data["ingredients"]
-            ],
-            instructions=[
-                RecipeInstructionCreate(**inst) for inst in recipe_data["instructions"]
-            ],
+            ingredients=[RecipeIngredientCreate(**ing) for ing in recipe_data["ingredients"]],
+            instructions=[RecipeInstructionCreate(**inst) for inst in recipe_data["instructions"]],
         )
 
         recipe = await RecipeService.create_recipe(
@@ -212,14 +207,10 @@ async def import_recipe_json(
         }
 
     except json.JSONDecodeError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid JSON file"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON file")
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Import failed: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Import failed: {str(e)}"
         )
 
 
@@ -230,22 +221,21 @@ async def import_multiple_recipes_json(
     current_user: User = Depends(get_current_user),
 ):
     """Import multiple recipes from a JSON file."""
-    if not file.filename.endswith('.json'):
+    if not file.filename.endswith(".json"):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only .json files are allowed"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Only .json files are allowed"
         )
 
     try:
         # Read and parse JSON
         content = await file.read()
-        data = json.loads(content.decode('utf-8'))
+        data = json.loads(content.decode("utf-8"))
 
         # Check if it's a bulk import (has "recipes" array)
         if "recipes" not in data:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid format: expected 'recipes' array"
+                detail="Invalid format: expected 'recipes' array",
             )
 
         recipes_data = data["recipes"]
@@ -286,7 +276,9 @@ async def import_multiple_recipes_json(
 
             except Exception as e:
                 failed_count += 1
-                errors.append(f"Recipe {idx + 1} ('{recipe_data.get('name', 'unknown')}'): {str(e)}")
+                errors.append(
+                    f"Recipe {idx + 1} ('{recipe_data.get('name', 'unknown')}'): {str(e)}"
+                )
 
         result_message = f"Imported {imported_count} recipe(s)"
         if failed_count > 0:
@@ -300,14 +292,10 @@ async def import_multiple_recipes_json(
         }
 
     except json.JSONDecodeError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid JSON file"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON file")
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Import failed: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Import failed: {str(e)}"
         )
 
 
@@ -470,14 +458,14 @@ async def list_recipe_ingredients(
     response_model=RecipeIngredientResponse,
     status_code=status.HTTP_201_CREATED,
 )
-async def add_recipe_ingredient(
+async def create_recipe_ingredient(
     recipe_id: UUID,
     ingredient_data: RecipeIngredientCreate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Add an ingredient to a recipe."""
-    ingredient = await RecipeService.create_ingredient(
+    """Add an ingredient to a recipe (supports linking to prep steps)."""
+    ingredient = await RecipeService.add_ingredient(
         db=db,
         recipe_id=recipe_id,
         ingredient_data=ingredient_data,
@@ -497,6 +485,26 @@ async def update_recipe_ingredient(
     current_user: User = Depends(get_current_user),
 ):
     """Update a recipe ingredient."""
+    ingredient = await RecipeService.update_ingredient(
+        db=db,
+        ingredient_id=ingredient_id,
+        ingredient_data=ingredient_data,
+    )
+    return ingredient
+
+
+@router.patch(
+    "/{recipe_id}/ingredients/{ingredient_id}",
+    response_model=RecipeIngredientResponse,
+)
+async def patch_recipe_ingredient(
+    recipe_id: UUID,
+    ingredient_id: UUID,
+    ingredient_data: RecipeIngredientUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Partially update a recipe ingredient (supports prep step linking)."""
     ingredient = await RecipeService.update_ingredient(
         db=db,
         ingredient_id=ingredient_id,
@@ -677,9 +685,7 @@ async def export_recipe_json(
     recipe = await RecipeService.get_recipe_by_id(db=db, recipe_id=recipe_id)
 
     if not recipe:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Recipe not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recipe not found")
 
     # Build export data structure
     export_data = {
@@ -713,14 +719,14 @@ async def export_recipe_json(
 
     # Create JSON file in memory
     json_str = json.dumps(export_data, indent=2, ensure_ascii=False)
-    json_bytes = json_str.encode('utf-8')
+    json_bytes = json_str.encode("utf-8")
 
     # Create filename from recipe name
-    safe_name = "".join(c if c.isalnum() or c in (' ', '-', '_') else '_' for c in recipe.name)
+    safe_name = "".join(c if c.isalnum() or c in (" ", "-", "_") else "_" for c in recipe.name)
     filename = f"{safe_name}.json"
 
     return StreamingResponse(
         io.BytesIO(json_bytes),
         media_type="application/json",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
