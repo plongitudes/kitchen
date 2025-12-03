@@ -60,6 +60,14 @@ export const recipeAPI = {
   restore: (id) => api.post(`/recipes/${id}/restore`),
   importPreview: (url) => api.post('/recipes/import-preview', { url }),
   reimport: (id) => api.post(`/recipes/${id}/reimport`),
+  
+  // Prep steps
+  getPrepSteps: (id) => api.get(`/recipes/${id}/prep-steps`),
+  createPrepStep: (id, data) => api.post(`/recipes/${id}/prep-steps`, data),
+  
+  // Ingredients
+  updateIngredient: (recipeId, ingredientId, data) => 
+    api.patch(`/recipes/${recipeId}/ingredients/${ingredientId}`, data),
 };
 
 // Template API

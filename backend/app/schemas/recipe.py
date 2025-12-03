@@ -18,7 +18,9 @@ class RecipeIngredientBase(BaseModel):
     quantity: Optional[float] = Field(None, gt=0)
     unit: Optional[IngredientUnit] = None
     order: int = Field(..., ge=0)
-    prep_note: Optional[str] = None
+    prep_note: Optional[str] = None  # Deprecated - use prep_step_id instead
+    prep_step_id: Optional[UUID] = None  # Link to existing prep step
+    prep_step_description: Optional[str] = None  # Create new prep step with this description
 
     @field_validator("unit", mode="before")
     @classmethod
@@ -49,7 +51,9 @@ class RecipeIngredientUpdate(BaseModel):
     quantity: Optional[float] = Field(None, gt=0)
     unit: Optional[IngredientUnit] = None
     order: Optional[int] = Field(None, ge=0)
-    prep_note: Optional[str] = None
+    prep_note: Optional[str] = None  # Deprecated
+    prep_step_id: Optional[UUID] = None  # Link to existing prep step (None = unlink)
+    prep_step_description: Optional[str] = None  # Create new prep step
 
     @field_validator("unit", mode="before")
     @classmethod
@@ -73,9 +77,28 @@ class RecipeIngredientResponse(RecipeIngredientBase):
     id: UUID
     recipe_id: UUID
     created_at: datetime
+    linked_prep_step_ids: List[UUID] = []  # IDs of prep steps this ingredient is linked to
 
     class Config:
         from_attributes = True
+
+    @classmethod
+    def from_model(cls, ingredient) -> "RecipeIngredientResponse":
+        """Convert from SQLAlchemy model to response schema."""
+        # Get linked prep step IDs from the prep_step_links relationship
+        linked_prep_step_ids = [link.prep_step_id for link in ingredient.prep_step_links]
+
+        return cls(
+            id=ingredient.id,
+            recipe_id=ingredient.recipe_id,
+            ingredient_name=ingredient.ingredient_name,
+            quantity=ingredient.quantity,
+            unit=ingredient.unit,
+            order=ingredient.order,
+            prep_note=ingredient.prep_note,
+            created_at=ingredient.created_at,
+            linked_prep_step_ids=linked_prep_step_ids,
+        )
 
 
 # ============================================================================
@@ -257,8 +280,17 @@ class RecipeDetailResponse(RecipeResponse):
     instructions: List[RecipeInstructionResponse] = []
     prep_steps: List[RecipePrepStepResponse] = []
 
-    class Config:
-        from_attributes = True
+    @field_validator("ingredients", mode="before")
+    @classmethod
+    def convert_ingredients(cls, v):
+        """Convert ingredients from model format (with prep_step_links) to response format."""
+        if not v:
+            return []
+        # If already RecipeIngredientResponse objects, return as-is
+        if v and isinstance(v[0], RecipeIngredientResponse):
+            return v
+        # Convert from model objects using from_model method
+        return [RecipeIngredientResponse.from_model(ing) for ing in v]
 
     @field_validator("prep_steps", mode="before")
     @classmethod
@@ -273,14 +305,16 @@ class RecipeDetailResponse(RecipeResponse):
         result = []
         for ps in v:
             if hasattr(ps, "ingredient_links"):
-                result.append(RecipePrepStepResponse(
-                    id=ps.id,
-                    recipe_id=ps.recipe_id,
-                    description=ps.description,
-                    order=ps.order,
-                    ingredient_ids=[link.recipe_ingredient_id for link in ps.ingredient_links],
-                    created_at=ps.created_at,
-                ))
+                result.append(
+                    RecipePrepStepResponse(
+                        id=ps.id,
+                        recipe_id=ps.recipe_id,
+                        description=ps.description,
+                        order=ps.order,
+                        ingredient_ids=[link.recipe_ingredient_id for link in ps.ingredient_links],
+                        created_at=ps.created_at,
+                    )
+                )
             else:
                 result.append(ps)
         return result

@@ -10,6 +10,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - kitchen-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin -d roanes_kitchen"]
       interval: 10s
@@ -37,6 +39,8 @@ services:
       - ENABLE_DEBUGPY=${ENABLE_DEBUGPY:-false}
     volumes:
       - ./backend:/app
+    networks:
+      - kitchen-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -59,6 +63,8 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+    networks:
+      - kitchen-network
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5173"]
       interval: 30s
@@ -69,6 +75,10 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+
+networks:
+  kitchen-network:
+    driver: bridge
 
 volumes:
   postgres_data:

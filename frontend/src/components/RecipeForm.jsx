@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { recipeAPI } from '../services/api';
 import Toast from './Toast';
+import UnitAutocomplete from './UnitAutocomplete';
+import PrepStepAutocomplete from './PrepStepAutocomplete';
 
 const RecipeForm = ({ recipeId = null, initialData = null }) => {
   const navigate = useNavigate();
@@ -12,8 +14,10 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
   const [reimportModal, setReimportModal] = useState(false);
   const [reimporting, setReimporting] = useState(false);
   const [toast, setToast] = useState(null);
+  const [prepStepsForAutocomplete, setPrepStepsForAutocomplete] = useState([]);
   const ingredientRefs = useRef([]);
   const instructionRefs = useRef([]);
+  const prepStepCreationInProgress = useRef(new Set()); // Track in-flight prep step creations
 
   const [formData, setFormData] = useState({
     name: '',
@@ -26,11 +30,39 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
     source_url: '',
     ingredients: [],
     instructions: [],
-    prep_steps: [],
   });
 
   useEffect(() => {
     if (initialData) {
+      // Build a map of prep steps for easy lookup
+      const prepStepsById = {};
+      if (initialData.prep_steps) {
+        initialData.prep_steps.forEach(ps => {
+          prepStepsById[ps.id] = ps;
+        });
+      }
+
+      // Populate prep_step_description on ingredients from linked prep steps
+      const ingredientsWithPrepSteps = (initialData.ingredients || []).map(ing => {
+        let prep_step_description = '';
+        
+        // If ingredient is linked to a prep step, use that description
+        if (ing.linked_prep_step_ids && ing.linked_prep_step_ids.length > 0) {
+          const prepStepId = ing.linked_prep_step_ids[0]; // Take first one
+          const prepStep = prepStepsById[prepStepId];
+          if (prepStep) {
+            prep_step_description = prepStep.description;
+          }
+        }
+        
+        // Spread ingredient but ensure prep_step_description is never null/undefined
+        const { prep_step_description: _, ...restOfIng } = ing;
+        return {
+          ...restOfIng,
+          prep_step_description,
+        };
+      });
+
       setFormData({
         name: initialData.name || '',
         recipe_type: initialData.recipe_type || '',
@@ -40,12 +72,46 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
         prep_notes: initialData.prep_notes || '',
         postmortem_notes: initialData.postmortem_notes || '',
         source_url: initialData.source_url || '',
-        ingredients: (initialData.ingredients || []).sort((a, b) => a.order - b.order),
+        ingredients: ingredientsWithPrepSteps.sort((a, b) => a.order - b.order),
         instructions: (initialData.instructions || []).sort((a, b) => a.step_number - b.step_number),
-        prep_steps: (initialData.prep_steps || []).sort((a, b) => a.order - b.order),
       });
     }
   }, [initialData]);
+
+  // Fetch prep steps for autocomplete when editing a recipe
+  useEffect(() => {
+    const fetchPrepSteps = async () => {
+      if (!recipeId) {
+        setPrepStepsForAutocomplete([]);
+        return;
+      }
+
+      try {
+        const response = await recipeAPI.getPrepSteps(recipeId);
+        // Transform backend response to autocomplete format
+        // Backend provides: { id, description, ingredient_ids }
+        // We need: { id, description, linked_ingredient_names }
+        const transformedSteps = response.data.map(step => {
+          // Match ingredient_ids to ingredient names from formData
+          const linkedNames = formData.ingredients
+            .filter(ing => ing.id && step.ingredient_ids.includes(ing.id))
+            .map(ing => ing.ingredient_name);
+          
+          return {
+            id: step.id,
+            description: step.description,
+            linked_ingredient_names: linkedNames,
+          };
+        });
+        setPrepStepsForAutocomplete(transformedSteps);
+      } catch (err) {
+        console.error('Failed to fetch prep steps:', err);
+        setPrepStepsForAutocomplete([]);
+      }
+    };
+
+    fetchPrepSteps();
+  }, [recipeId, formData.ingredients]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -77,16 +143,12 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
           quantity: ing.quantity ? parseFloat(ing.quantity) : null,
           unit: ing.unit || null,
           order: ing.order,
+          prep_step_description: ing.prep_step_description || null,
         })),
         instructions: formData.instructions.map(inst => ({
           step_number: inst.step_number,
           description: inst.description,
           duration_minutes: inst.duration_minutes ? parseInt(inst.duration_minutes) : null,
-        })),
-        prep_steps: formData.prep_steps.map(ps => ({
-          description: ps.description,
-          order: ps.order,
-          ingredient_orders: ps.ingredient_orders || [],
         })),
       };
 
@@ -165,7 +227,7 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
           quantity: '',
           unit: '',
           order: newIndex,
-          prep_note: '',
+          prep_step_description: '',
         },
       ],
     });
@@ -190,6 +252,60 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
       ing.order = i;
     });
     setFormData({ ...formData, ingredients: updated });
+  };
+
+  const handlePrepStepBlur = async (prepStepText) => {
+    // Only create prep steps for existing recipes (edit mode)
+    if (!recipeId || !prepStepText || !prepStepText.trim()) {
+      return;
+    }
+
+    const trimmedText = prepStepText.trim().toLowerCase();
+
+    // Check if this prep step already exists
+    const exists = prepStepsForAutocomplete.some(
+      ps => ps.description.toLowerCase() === trimmedText
+    );
+
+    if (exists) {
+      return; // Already exists, no need to create
+    }
+
+    // Check if we're already creating this prep step (prevent race condition)
+    if (prepStepCreationInProgress.current.has(trimmedText)) {
+      return;
+    }
+
+    // Mark this prep step as being created
+    prepStepCreationInProgress.current.add(trimmedText);
+
+    try {
+      // Create the prep step on the backend
+      const response = await recipeAPI.createPrepStep(recipeId, {
+        description: prepStepText.trim(),
+        order: prepStepsForAutocomplete.length,
+      });
+
+      // Add to autocomplete list immediately
+      setPrepStepsForAutocomplete(prev => [
+        ...prev,
+        {
+          id: response.data.id,
+          description: response.data.description,
+          linked_ingredient_names: [],
+        },
+      ]);
+    } catch (err) {
+      console.error('Failed to create prep step on-the-fly:', err);
+      // Show error to user since this is a background operation that failed
+      setToast({
+        message: `Could not create prep step "${prepStepText.trim()}". You can still save the recipe.`,
+        type: 'error',
+      });
+    } finally {
+      // Always remove from in-progress set
+      prepStepCreationInProgress.current.delete(trimmedText);
+    }
   };
 
   const addInstruction = () => {
@@ -300,47 +416,7 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
     setFormData({ ...formData, instructions: updated });
   };
 
-  // Prep Step Management
-  const addPrepStep = () => {
-    const newIndex = formData.prep_steps.length;
-    setFormData({
-      ...formData,
-      prep_steps: [
-        ...formData.prep_steps,
-        {
-          description: '',
-          order: newIndex,
-          ingredient_orders: [],
-        },
-      ],
-    });
-  };
 
-  const updatePrepStep = (index, field, value) => {
-    const updated = [...formData.prep_steps];
-    updated[index] = { ...updated[index], [field]: value };
-    setFormData({ ...formData, prep_steps: updated });
-  };
-
-  const removePrepStep = (index) => {
-    const updated = formData.prep_steps.filter((_, i) => i !== index);
-    // Re-index the order
-    updated.forEach((ps, i) => {
-      ps.order = i;
-    });
-    setFormData({ ...formData, prep_steps: updated });
-  };
-
-  const toggleIngredientForPrepStep = (prepStepIndex, ingredientOrder) => {
-    const updated = [...formData.prep_steps];
-    const currentOrders = updated[prepStepIndex].ingredient_orders || [];
-    if (currentOrders.includes(ingredientOrder)) {
-      updated[prepStepIndex].ingredient_orders = currentOrders.filter(o => o !== ingredientOrder);
-    } else {
-      updated[prepStepIndex].ingredient_orders = [...currentOrders, ingredientOrder];
-    }
-    setFormData({ ...formData, prep_steps: updated });
-  };
 
   const handleDragStart = (e, index) => {
     e.dataTransfer.effectAllowed = 'move';
@@ -376,12 +452,7 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
     setFormData({ ...formData, instructions: updated });
   };
 
-  const units = [
-    'teaspoon', 'tablespoon', 'cup', 'fluid_ounce', 'pint', 'quart', 'gallon',
-    'ml', 'liter', 'gram', 'kilogram', 'ounce', 'pound',
-    'count', 'whole', 'item', 'bunch', 'clove', 'can', 'jar', 'package',
-    'pinch', 'dash', 'to taste'
-  ];
+
 
   return (
     <form onSubmit={handleSubmit} className="max-w-4xl mx-auto p-8">
@@ -540,7 +611,7 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
                   <input
                     ref={(el) => (ingredientRefs.current[index] = el)}
                     type="text"
-                    value={ing.ingredient_name}
+                    value={ing.ingredient_name ?? ''}
                     onChange={(e) => updateIngredient(index, 'ingredient_name', e.target.value)}
                     className="flex-1 p-2 rounded bg-gruvbox-dark-bg border border-gruvbox-dark-gray text-gruvbox-dark-fg focus:outline-none focus:border-gruvbox-dark-orange-bright"
                     placeholder="Ingredient name"
@@ -548,25 +619,20 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
                   />
                   <input
                     type="number"
-                    value={ing.quantity}
+                    value={ing.quantity ?? ''}
                     onChange={(e) => updateIngredient(index, 'quantity', e.target.value)}
                     className="w-24 p-2 rounded bg-gruvbox-dark-bg border border-gruvbox-dark-gray text-gruvbox-dark-fg focus:outline-none focus:border-gruvbox-dark-orange-bright"
                     placeholder="Qty"
                     step="0.01"
                     required={ing.unit && ing.unit !== ''}
                   />
-                  <select
-                    value={ing.unit || ''}
-                    onChange={(e) => updateIngredient(index, 'unit', e.target.value)}
-                    className="w-32 p-2 rounded bg-gruvbox-dark-bg border border-gruvbox-dark-gray text-gruvbox-dark-fg focus:outline-none focus:border-gruvbox-dark-orange-bright"
-                  >
-                    <option value="">-- None --</option>
-                    {units.map((unit) => (
-                      <option key={unit} value={unit}>
-                        {unit}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="w-40">
+                    <UnitAutocomplete
+                      value={ing.unit || ''}
+                      onChange={(value) => updateIngredient(index, 'unit', value)}
+                      required={false}
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={() => removeIngredient(index)}
@@ -575,81 +641,13 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
                     ×
                   </button>
                 </div>
-                <input
-                  type="text"
-                  value={ing.prep_note || ''}
-                  onChange={(e) => updateIngredient(index, 'prep_note', e.target.value)}
-                  className="w-full p-2 rounded bg-gruvbox-dark-bg border border-gruvbox-dark-gray text-gruvbox-dark-fg focus:outline-none focus:border-gruvbox-dark-orange-bright text-sm"
-                  placeholder="Prep note (optional, e.g., '1-inch cubed', 'finely chopped')"
+                <PrepStepAutocomplete
+                  value={ing.prep_step_description ?? ''}
+                  onChange={(value) => updateIngredient(index, 'prep_step_description', value)}
+                  onBlur={() => handlePrepStepBlur(ing.prep_step_description)}
+                  prepSteps={prepStepsForAutocomplete}
+                  required={false}
                 />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Prep Steps */}
-      <div className="bg-gruvbox-dark-bg-soft p-6 rounded-lg border border-gruvbox-dark-gray mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gruvbox-dark-purple-bright">
-            Prep Steps
-          </h2>
-          <button
-            type="button"
-            onClick={addPrepStep}
-            className="px-3 py-1 bg-gruvbox-dark-purple hover:bg-gruvbox-dark-purple-bright rounded transition"
-          >
-            + Add
-          </button>
-        </div>
-
-        {formData.prep_steps.length === 0 ? (
-          <p className="text-gruvbox-dark-gray">No prep steps yet. Add steps like "dice the onions" or "mince the garlic".</p>
-        ) : (
-          <div className="space-y-4">
-            {formData.prep_steps.map((ps, index) => (
-              <div key={index} className="p-3 bg-gruvbox-dark-bg rounded border border-gruvbox-dark-gray">
-                <div className="flex gap-2 mb-2">
-                  <span className="w-8 p-2 text-center text-gruvbox-dark-gray">
-                    {index + 1}.
-                  </span>
-                  <input
-                    type="text"
-                    value={ps.description}
-                    onChange={(e) => updatePrepStep(index, 'description', e.target.value)}
-                    className="flex-1 p-2 rounded bg-gruvbox-dark-bg-soft border border-gruvbox-dark-gray text-gruvbox-dark-fg focus:outline-none focus:border-gruvbox-dark-purple-bright"
-                    placeholder="e.g., Slice thinly, Dice into 1-inch cubes"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removePrepStep(index)}
-                    className="px-3 py-2 bg-gruvbox-dark-red hover:bg-gruvbox-dark-red-bright rounded transition"
-                  >
-                    ×
-                  </button>
-                </div>
-                {formData.ingredients.length > 0 && (
-                  <div className="ml-10">
-                    <p className="text-sm text-gruvbox-dark-gray mb-2">Link to ingredients:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {formData.ingredients.map((ing, ingIndex) => (
-                        <button
-                          key={ingIndex}
-                          type="button"
-                          onClick={() => toggleIngredientForPrepStep(index, ing.order)}
-                          className={`px-2 py-1 text-sm rounded transition ${
-                            (ps.ingredient_orders || []).includes(ing.order)
-                              ? 'bg-gruvbox-dark-purple text-gruvbox-dark-fg'
-                              : 'bg-gruvbox-dark-bg-soft text-gruvbox-dark-gray hover:bg-gruvbox-dark-gray'
-                          }`}
-                        >
-                          {ing.ingredient_name || `Ingredient ${ingIndex + 1}`}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             ))}
           </div>

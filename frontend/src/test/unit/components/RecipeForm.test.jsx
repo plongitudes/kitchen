@@ -11,6 +11,7 @@ vi.mock('../../../services/api', () => ({
     create: vi.fn(),
     update: vi.fn(),
     get: vi.fn(),
+    getPrepSteps: vi.fn().mockResolvedValue({ data: [] }),
   },
 }));
 
