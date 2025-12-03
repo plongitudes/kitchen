@@ -98,6 +98,7 @@ class Recipe(Base):
         "RecipePrepStep",
         back_populates="recipe",
         cascade="all, delete-orphan",
+        order_by="RecipePrepStep.order",
     )
 
     def __repr__(self):
