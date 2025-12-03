@@ -1,4 +1,0 @@
-// Runtime configuration - DO NOT EDIT (generated at container startup)
-window.APP_CONFIG = {
-  API_URL: '${API_URL}'
-};
