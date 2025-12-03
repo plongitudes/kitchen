@@ -62,7 +62,9 @@ class TestGetRecipes:
         assert "Recipe A" in names
         assert "Recipe B" in names
 
-    async def test_filters_by_owner(self, async_db_session, async_test_user, async_second_test_user):
+    async def test_filters_by_owner(
+        self, async_db_session, async_test_user, async_second_test_user
+    ):
         """Test that recipes can be filtered by owner."""
         recipe1 = RecipeFactory.build(owner_id=async_test_user.id, name="User1 Recipe")
         recipe2 = RecipeFactory.build(owner_id=async_second_test_user.id, name="User2 Recipe")
@@ -78,7 +80,9 @@ class TestGetRecipes:
 
     async def test_filters_by_recipe_type(self, async_db_session, async_test_user):
         """Test that recipes can be filtered by type."""
-        dinner = RecipeFactory.build(owner_id=async_test_user.id, name="Dinner", recipe_type="dinner")
+        dinner = RecipeFactory.build(
+            owner_id=async_test_user.id, name="Dinner", recipe_type="dinner"
+        )
         lunch = RecipeFactory.build(owner_id=async_test_user.id, name="Lunch", recipe_type="lunch")
         async_db_session.add(dinner)
         async_db_session.add(lunch)
@@ -93,7 +97,9 @@ class TestGetRecipes:
     async def test_excludes_retired_by_default(self, async_db_session, async_test_user):
         """Test that retired recipes are excluded by default."""
         active = RecipeFactory.build(owner_id=async_test_user.id, name="Active Recipe")
-        retired = RecipeFactory.build(owner_id=async_test_user.id, name="Retired Recipe", retired_at=datetime.utcnow())
+        retired = RecipeFactory.build(
+            owner_id=async_test_user.id, name="Retired Recipe", retired_at=datetime.utcnow()
+        )
         async_db_session.add(active)
         async_db_session.add(retired)
         await async_db_session.commit()
@@ -107,7 +113,9 @@ class TestGetRecipes:
     async def test_includes_retired_when_requested(self, async_db_session, async_test_user):
         """Test that retired recipes can be included."""
         active = RecipeFactory.build(owner_id=async_test_user.id, name="Active Recipe 2")
-        retired = RecipeFactory.build(owner_id=async_test_user.id, name="Retired Recipe 2", retired_at=datetime.utcnow())
+        retired = RecipeFactory.build(
+            owner_id=async_test_user.id, name="Retired Recipe 2", retired_at=datetime.utcnow()
+        )
         async_db_session.add(active)
         async_db_session.add(retired)
         await async_db_session.commit()
@@ -130,7 +138,11 @@ class TestGetRecipes:
 
         result = await RecipeService.get_recipes(async_db_session)
 
-        test_recipes = [r for r in result if r.name in ["Alpha Appetizer", "Bravo Breakfast", "Charlie Casserole"]]
+        test_recipes = [
+            r
+            for r in result
+            if r.name in ["Alpha Appetizer", "Bravo Breakfast", "Charlie Casserole"]
+        ]
         names = [r.name for r in test_recipes]
         assert names == sorted(names)
 
@@ -215,7 +227,9 @@ class TestCreateRecipe:
             instructions=[],
         )
 
-        result = await RecipeService.create_recipe(async_db_session, recipe_data, async_test_user.id)
+        result = await RecipeService.create_recipe(
+            async_db_session, recipe_data, async_test_user.id
+        )
 
         assert result is not None
         assert result.name == "New Recipe"
@@ -234,7 +248,9 @@ class TestCreateRecipe:
             instructions=[],
         )
 
-        result = await RecipeService.create_recipe(async_db_session, recipe_data, async_test_user.id)
+        result = await RecipeService.create_recipe(
+            async_db_session, recipe_data, async_test_user.id
+        )
 
         assert result is not None
         assert len(result.ingredients) == 2
@@ -254,7 +270,9 @@ class TestCreateRecipe:
             ],
         )
 
-        result = await RecipeService.create_recipe(async_db_session, recipe_data, async_test_user.id)
+        result = await RecipeService.create_recipe(
+            async_db_session, recipe_data, async_test_user.id
+        )
 
         assert result is not None
         assert len(result.instructions) == 2
@@ -282,7 +300,9 @@ class TestCreateRecipe:
             instructions=[],
         )
 
-        result = await RecipeService.create_recipe(async_db_session, recipe_data, async_test_user.id)
+        result = await RecipeService.create_recipe(
+            async_db_session, recipe_data, async_test_user.id
+        )
 
         assert result is not None
         assert len(result.ingredients) == 1
@@ -333,7 +353,9 @@ class TestUpdateRecipe:
 
         update_data = RecipeUpdate(
             ingredients=[
-                RecipeIngredientCreate(ingredient_name="New Ingredient", quantity=2.0, unit="tablespoon", order=0),
+                RecipeIngredientCreate(
+                    ingredient_name="New Ingredient", quantity=2.0, unit="tablespoon", order=0
+                ),
             ]
         )
 
@@ -577,7 +599,9 @@ class TestIngredientCRUD:
             order=0,
         )
 
-        result = await RecipeService.create_ingredient(async_db_session, recipe.id, ingredient_data)
+        result = await RecipeService.create_ingredient(
+            async_db_session, recipe.id, ingredient_data, prep_step_map={}
+        )
 
         assert result is not None
         assert result.ingredient_name == "Butter"
@@ -594,7 +618,9 @@ class TestIngredientCRUD:
         )
 
         with pytest.raises(HTTPException) as exc_info:
-            await RecipeService.create_ingredient(async_db_session, fake_id, ingredient_data)
+            await RecipeService.create_ingredient(
+                async_db_session, fake_id, ingredient_data, prep_step_map={}
+            )
 
         assert exc_info.value.status_code == 404
 
@@ -666,8 +692,12 @@ class TestInstructionCRUD:
         async_db_session.add(recipe)
         await async_db_session.flush()
 
-        inst1 = RecipeInstructionFactory.build(recipe_id=recipe.id, step_number=1, description="Step 1")
-        inst2 = RecipeInstructionFactory.build(recipe_id=recipe.id, step_number=2, description="Step 2")
+        inst1 = RecipeInstructionFactory.build(
+            recipe_id=recipe.id, step_number=1, description="Step 1"
+        )
+        inst2 = RecipeInstructionFactory.build(
+            recipe_id=recipe.id, step_number=2, description="Step 2"
+        )
         async_db_session.add(inst1)
         async_db_session.add(inst2)
         await async_db_session.commit()
@@ -690,7 +720,9 @@ class TestInstructionCRUD:
             duration_minutes=5,
         )
 
-        result = await RecipeService.create_instruction(async_db_session, recipe.id, instruction_data)
+        result = await RecipeService.create_instruction(
+            async_db_session, recipe.id, instruction_data
+        )
 
         assert result is not None
         assert result.description == "Mix all ingredients"
@@ -721,7 +753,9 @@ class TestInstructionCRUD:
         await async_db_session.commit()
 
         update_data = RecipeInstructionUpdate(description="Updated", duration_minutes=10)
-        result = await RecipeService.update_instruction(async_db_session, instruction.id, update_data)
+        result = await RecipeService.update_instruction(
+            async_db_session, instruction.id, update_data
+        )
 
         assert result.description == "Updated"
         assert result.duration_minutes == 10
@@ -742,7 +776,9 @@ class TestInstructionCRUD:
         async_db_session.add(recipe)
         await async_db_session.flush()
 
-        instruction = RecipeInstructionFactory.build(recipe_id=recipe.id, step_number=1, description="ToDelete")
+        instruction = RecipeInstructionFactory.build(
+            recipe_id=recipe.id, step_number=1, description="ToDelete"
+        )
         async_db_session.add(instruction)
         await async_db_session.commit()
         instruction_id = instruction.id
@@ -836,7 +872,9 @@ class TestPrepStepCRUD:
         async_db_session.add(recipe)
         await async_db_session.flush()
 
-        ingredient = RecipeIngredientFactory.build(recipe_id=recipe.id, ingredient_name="Onion", order=0)
+        ingredient = RecipeIngredientFactory.build(
+            recipe_id=recipe.id, ingredient_name="Onion", order=0
+        )
         async_db_session.add(ingredient)
         await async_db_session.commit()
 
@@ -916,15 +954,21 @@ class TestPrepStepCRUD:
             name="Recipe",
             recipe_type="dinner",
             ingredients=[
-                RecipeIngredientCreate(ingredient_name="Onion", quantity=1.0, unit="whole", order=0),
-                RecipeIngredientCreate(ingredient_name="Garlic", quantity=3.0, unit="clove", order=1),
+                RecipeIngredientCreate(
+                    ingredient_name="Onion", quantity=1.0, unit="whole", order=0
+                ),
+                RecipeIngredientCreate(
+                    ingredient_name="Garlic", quantity=3.0, unit="clove", order=1
+                ),
             ],
             instructions=[],
             prep_steps=[
                 RecipePrepStepCreate(description="Prep step", order=0, ingredient_orders=[0]),
             ],
         )
-        recipe = await RecipeService.create_recipe(async_db_session, recipe_data, async_test_user.id)
+        recipe = await RecipeService.create_recipe(
+            async_db_session, recipe_data, async_test_user.id
+        )
 
         # Get the prep step and ingredient IDs
         prep_step_id = recipe.prep_steps[0].id
@@ -984,17 +1028,25 @@ class TestCreateRecipeWithPrepSteps:
             name="Recipe with Prep Steps",
             recipe_type="dinner",
             ingredients=[
-                RecipeIngredientCreate(ingredient_name="Onion", quantity=1.0, unit="whole", order=0),
-                RecipeIngredientCreate(ingredient_name="Garlic", quantity=3.0, unit="clove", order=1),
+                RecipeIngredientCreate(
+                    ingredient_name="Onion", quantity=1.0, unit="whole", order=0
+                ),
+                RecipeIngredientCreate(
+                    ingredient_name="Garlic", quantity=3.0, unit="clove", order=1
+                ),
             ],
             instructions=[],
             prep_steps=[
                 RecipePrepStepCreate(description="Dice the onion", order=0, ingredient_orders=[0]),
-                RecipePrepStepCreate(description="Mince the garlic", order=1, ingredient_orders=[1]),
+                RecipePrepStepCreate(
+                    description="Mince the garlic", order=1, ingredient_orders=[1]
+                ),
             ],
         )
 
-        result = await RecipeService.create_recipe(async_db_session, recipe_data, async_test_user.id)
+        result = await RecipeService.create_recipe(
+            async_db_session, recipe_data, async_test_user.id
+        )
 
         assert result is not None
         assert len(result.prep_steps) == 2
@@ -1004,22 +1056,32 @@ class TestCreateRecipeWithPrepSteps:
         assert len(result.prep_steps[0].ingredient_links) == 1
         assert len(result.prep_steps[1].ingredient_links) == 1
 
-    async def test_creates_recipe_with_prep_step_multiple_ingredients(self, async_db_session, async_test_user):
+    async def test_creates_recipe_with_prep_step_multiple_ingredients(
+        self, async_db_session, async_test_user
+    ):
         """Test creating a prep step that links to multiple ingredients."""
         recipe_data = RecipeCreate(
             name="Recipe with Multi-Ingredient Prep",
             recipe_type="dinner",
             ingredients=[
-                RecipeIngredientCreate(ingredient_name="Onion", quantity=1.0, unit="whole", order=0),
-                RecipeIngredientCreate(ingredient_name="Garlic", quantity=3.0, unit="clove", order=1),
+                RecipeIngredientCreate(
+                    ingredient_name="Onion", quantity=1.0, unit="whole", order=0
+                ),
+                RecipeIngredientCreate(
+                    ingredient_name="Garlic", quantity=3.0, unit="clove", order=1
+                ),
             ],
             instructions=[],
             prep_steps=[
-                RecipePrepStepCreate(description="Dice the aromatics", order=0, ingredient_orders=[0, 1]),
+                RecipePrepStepCreate(
+                    description="Dice the aromatics", order=0, ingredient_orders=[0, 1]
+                ),
             ],
         )
 
-        result = await RecipeService.create_recipe(async_db_session, recipe_data, async_test_user.id)
+        result = await RecipeService.create_recipe(
+            async_db_session, recipe_data, async_test_user.id
+        )
 
         assert result is not None
         assert len(result.prep_steps) == 1
