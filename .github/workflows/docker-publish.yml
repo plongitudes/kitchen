@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+      - 'feature/**'  # Build images for all feature branches
+      - 'dev/**'      # Build images for all dev branches
     tags:
       - 'v*.*.*'
   workflow_dispatch:
