@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-restricted-imports -- This is the centralized API instance
 import axios from 'axios';
 
 // Create axios instance without baseURL initially
