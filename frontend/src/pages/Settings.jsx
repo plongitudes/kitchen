@@ -893,7 +893,7 @@ const Settings = () => {
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 space-y-1">
                         <div className={`font-medium text-sm truncate ${
                           isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'
                         }`}>
@@ -1239,7 +1239,7 @@ const Settings = () => {
                             : 'bg-gruvbox-light-bg-soft border-gruvbox-light-gray'
                         }`}
                       >
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 space-y-1">
                           <div className={`font-medium truncate ${
                             isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'
                           }`}>
