@@ -10,9 +10,9 @@ const api = axios.create({
 // Request interceptor to add auth token and set baseURL from runtime config
 api.interceptors.request.use(
   (config) => {
-    // Get API URL from runtime config (loaded from config.js) or fall back to build-time env var or localhost
+    // Get API URL from runtime config (injected at container startup) or fall back to localhost
     // This is evaluated at request time, ensuring window.APP_CONFIG is available
-    const apiUrl = window.APP_CONFIG?.API_URL || import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const apiUrl = window.APP_CONFIG?.API_URL || 'http://localhost:8000';
     config.baseURL = apiUrl;
     
     const token = localStorage.getItem('access_token');
