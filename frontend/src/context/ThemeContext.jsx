@@ -24,6 +24,11 @@ export const ThemeProvider = ({ children }) => {
     return saved && AVAILABLE_FONTS[saved] ? saved : DEFAULT_FONT;
   });
 
+  const [fontSizeOverrides, setFontSizeOverrides] = useState(() => {
+    const saved = localStorage.getItem('fontSizeOverrides');
+    return saved ? JSON.parse(saved) : {};
+  });
+
   const [allFonts, setAllFonts] = useState(AVAILABLE_FONTS);
 
   // Load custom fonts from IndexedDB
@@ -97,13 +102,18 @@ export const ThemeProvider = ({ children }) => {
       document.head.appendChild(link);
     }
 
+    // Get size/lineHeight overrides or use defaults
+    const override = fontSizeOverrides[currentFont];
+    const finalSize = override?.size || font.size;
+    const finalLineHeight = override?.lineHeight || font.lineHeight;
+
     // Apply font CSS variables
     document.documentElement.style.setProperty('--font-ui', font.family);
-    document.documentElement.style.setProperty('--font-size', font.size);
-    document.documentElement.style.setProperty('--line-height', font.lineHeight);
+    document.documentElement.style.setProperty('--font-size', finalSize);
+    document.documentElement.style.setProperty('--line-height', finalLineHeight);
 
     localStorage.setItem('uiFont', currentFont);
-  }, [currentFont, allFonts]);
+  }, [currentFont, allFonts, fontSizeOverrides]);
 
   const toggleTheme = () => {
     setIsDark((prev) => !prev);
@@ -113,6 +123,38 @@ export const ThemeProvider = ({ children }) => {
     if (allFonts[fontKey]) {
       setCurrentFont(fontKey);
     }
+  };
+
+  const setFontSizeOverride = (fontKey, size, lineHeight) => {
+    const newOverrides = {
+      ...fontSizeOverrides,
+      [fontKey]: {
+        size: typeof size === 'number' ? `${size}px` : size,
+        lineHeight: typeof lineHeight === 'number' ? lineHeight.toString() : lineHeight,
+      },
+    };
+    setFontSizeOverrides(newOverrides);
+    localStorage.setItem('fontSizeOverrides', JSON.stringify(newOverrides));
+  };
+
+  const resetFontSizeOverride = (fontKey) => {
+    const newOverrides = { ...fontSizeOverrides };
+    delete newOverrides[fontKey];
+    setFontSizeOverrides(newOverrides);
+    localStorage.setItem('fontSizeOverrides', JSON.stringify(newOverrides));
+  };
+
+  const getCurrentFontSettings = () => {
+    const font = allFonts[currentFont];
+    if (!font) return null;
+
+    const override = fontSizeOverrides[currentFont];
+    return {
+      ...font,
+      currentSize: override?.size || font.size,
+      currentLineHeight: override?.lineHeight || font.lineHeight,
+      hasOverride: !!override,
+    };
   };
 
   // Function to reload custom fonts (called after upload/delete)
@@ -154,6 +196,9 @@ export const ThemeProvider = ({ children }) => {
         setFont,
         availableFonts: allFonts,
         reloadCustomFonts,
+        setFontSizeOverride,
+        resetFontSizeOverride,
+        getCurrentFontSettings,
       }}
     >
       {children}

@@ -12,6 +12,8 @@ export const AVAILABLE_FONTS = {
     size: '13px',
     lineHeight: '1.4',
     description: 'Clean, readable pixel font',
+    sizeRange: { min: 10, max: 20, default: 13 },
+    lineHeightRange: { min: 1.0, max: 2.0, default: 1.4 },
   },
   pixelifySans: {
     name: 'Pixelify Sans',
@@ -20,6 +22,8 @@ export const AVAILABLE_FONTS = {
     size: '14px',
     lineHeight: '1.3',
     description: 'Modern pixel font with variable weight',
+    sizeRange: { min: 10, max: 20, default: 14 },
+    lineHeightRange: { min: 1.0, max: 2.0, default: 1.3 },
   },
   jersey10: {
     name: 'Jersey 10',
@@ -28,6 +32,8 @@ export const AVAILABLE_FONTS = {
     size: '16px',
     lineHeight: '1.2',
     description: 'Sporty pixel font',
+    sizeRange: { min: 12, max: 24, default: 16 },
+    lineHeightRange: { min: 1.0, max: 2.0, default: 1.2 },
   },
   tiny5: {
     name: 'Tiny5',
@@ -36,6 +42,8 @@ export const AVAILABLE_FONTS = {
     size: '16px',
     lineHeight: '1.3',
     description: 'Ultra-compact 5px pixel font',
+    sizeRange: { min: 12, max: 24, default: 16 },
+    lineHeightRange: { min: 1.0, max: 2.0, default: 1.3 },
   },
   vt323: {
     name: 'VT323',
@@ -44,6 +52,8 @@ export const AVAILABLE_FONTS = {
     size: '18px',
     lineHeight: '1.3',
     description: 'Terminal/VT220 style monospace font',
+    sizeRange: { min: 14, max: 28, default: 18 },
+    lineHeightRange: { min: 1.0, max: 2.0, default: 1.3 },
   },
   pressStart2p: {
     name: 'Press Start 2P',
@@ -52,6 +62,8 @@ export const AVAILABLE_FONTS = {
     size: '16px',
     lineHeight: '1.5',
     description: '8-bit gaming font from 1980s arcades',
+    sizeRange: { min: 8, max: 20, default: 16 },
+    lineHeightRange: { min: 1.0, max: 2.0, default: 1.5 },
   },
   dotGothic16: {
     name: 'DotGothic16',
@@ -60,6 +72,8 @@ export const AVAILABLE_FONTS = {
     size: '16px',
     lineHeight: '1.4',
     description: '16px Japanese-style pixel font',
+    sizeRange: { min: 12, max: 24, default: 16 },
+    lineHeightRange: { min: 1.0, max: 2.0, default: 1.4 },
   },
   shareTechMono: {
     name: 'Share Tech Mono',
@@ -68,6 +82,8 @@ export const AVAILABLE_FONTS = {
     size: '14px',
     lineHeight: '1.4',
     description: 'Clean monospace with technical aesthetic',
+    sizeRange: { min: 10, max: 20, default: 14 },
+    lineHeightRange: { min: 1.0, max: 2.0, default: 1.4 },
   },
   ibmPlexMono: {
     name: 'IBM Plex Mono',
@@ -76,6 +92,8 @@ export const AVAILABLE_FONTS = {
     size: '14px',
     lineHeight: '1.4',
     description: 'IBM terminal-inspired monospace',
+    sizeRange: { min: 10, max: 20, default: 14 },
+    lineHeightRange: { min: 1.0, max: 2.0, default: 1.4 },
   },
   courierPrime: {
     name: 'Courier Prime',
@@ -84,6 +102,8 @@ export const AVAILABLE_FONTS = {
     size: '14px',
     lineHeight: '1.4',
     description: 'Typewriter-style retro monospace',
+    sizeRange: { min: 10, max: 20, default: 14 },
+    lineHeightRange: { min: 1.0, max: 2.0, default: 1.4 },
   },
 };
 

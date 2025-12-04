@@ -9,7 +9,17 @@ import {
 } from '../utils/fontStorage';
 
 const Settings = () => {
-  const { isDark, toggleTheme, currentFont, setFont, availableFonts, reloadCustomFonts } = useTheme();
+  const {
+    isDark,
+    toggleTheme,
+    currentFont,
+    setFont,
+    availableFonts,
+    reloadCustomFonts,
+    setFontSizeOverride,
+    resetFontSizeOverride,
+    getCurrentFontSettings,
+  } = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -46,6 +56,21 @@ const Settings = () => {
   const [fontName, setFontName] = useState('');
   const [fontSize, setFontSize] = useState('14');
   const [fontLineHeight, setFontLineHeight] = useState('1.2');
+
+  // Font size override state (for current font)
+  const [tempFontSize, setTempFontSize] = useState(null);
+  const [tempLineHeight, setTempLineHeight] = useState(null);
+
+  // Update temp sliders when font changes
+  useEffect(() => {
+    const settings = getCurrentFontSettings();
+    if (settings) {
+      const sizeNum = parseInt(settings.currentSize);
+      const lhNum = parseFloat(settings.currentLineHeight);
+      setTempFontSize(sizeNum);
+      setTempLineHeight(lhNum);
+    }
+  }, [currentFont, getCurrentFontSettings]);
 
   const timezones = [
     'UTC',
@@ -999,6 +1024,104 @@ const Settings = () => {
                 ))}
               </select>
             </div>
+
+            {/* Font Size/LineHeight Adjustments */}
+            {availableFonts[currentFont]?.sizeRange && (
+              <div className={`mt-4 p-4 rounded border ${
+                isDark
+                  ? 'bg-gruvbox-dark-bg border-gruvbox-dark-gray'
+                  : 'bg-gruvbox-light-bg border-gruvbox-light-gray'
+              }`}>
+                <h3 className={`font-semibold mb-3 ${
+                  isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'
+                }`}>
+                  Font Size Adjustment
+                </h3>
+
+                <div className="space-y-3">
+                  {/* Font Size Slider */}
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className={`text-sm ${
+                        isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'
+                      }`}>
+                        Size: {tempFontSize}px
+                      </label>
+                      {getCurrentFontSettings()?.hasOverride && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            resetFontSizeOverride(currentFont);
+                            const settings = getCurrentFontSettings();
+                            setTempFontSize(parseInt(settings.size));
+                            setTempLineHeight(parseFloat(settings.lineHeight));
+                          }}
+                          className={`text-xs px-2 py-1 rounded transition ${
+                            isDark
+                              ? 'bg-gruvbox-dark-gray hover:bg-gruvbox-dark-gray text-gruvbox-dark-fg'
+                              : 'bg-gruvbox-light-gray hover:bg-gruvbox-light-gray text-gruvbox-light-fg'
+                          }`}
+                        >
+                          Reset to Default
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type="range"
+                      min={availableFonts[currentFont].sizeRange.min}
+                      max={availableFonts[currentFont].sizeRange.max}
+                      value={tempFontSize || availableFonts[currentFont].sizeRange.default}
+                      onChange={(e) => {
+                        const newSize = parseInt(e.target.value);
+                        setTempFontSize(newSize);
+                        setFontSizeOverride(currentFont, newSize, tempLineHeight);
+                      }}
+                      className="w-full"
+                    />
+                    <div className={`flex justify-between text-xs mt-1 ${
+                      isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'
+                    }`}>
+                      <span>{availableFonts[currentFont].sizeRange.min}px</span>
+                      <span>{availableFonts[currentFont].sizeRange.max}px</span>
+                    </div>
+                  </div>
+
+                  {/* Line Height Slider */}
+                  <div>
+                    <label className={`block text-sm mb-1 ${
+                      isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'
+                    }`}>
+                      Line Height: {tempLineHeight?.toFixed(1)}
+                    </label>
+                    <input
+                      type="range"
+                      min={availableFonts[currentFont].lineHeightRange.min}
+                      max={availableFonts[currentFont].lineHeightRange.max}
+                      step="0.1"
+                      value={tempLineHeight || availableFonts[currentFont].lineHeightRange.default}
+                      onChange={(e) => {
+                        const newLH = parseFloat(e.target.value);
+                        setTempLineHeight(newLH);
+                        setFontSizeOverride(currentFont, tempFontSize, newLH);
+                      }}
+                      className="w-full"
+                    />
+                    <div className={`flex justify-between text-xs mt-1 ${
+                      isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'
+                    }`}>
+                      <span>{availableFonts[currentFont].lineHeightRange.min}</span>
+                      <span>{availableFonts[currentFont].lineHeightRange.max}</span>
+                    </div>
+                  </div>
+
+                  <p className={`text-xs ${
+                    isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'
+                  }`}>
+                    Adjust font size and line height for optimal readability. Changes apply immediately.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Custom Font Upload */}
             <div className={`mt-4 p-4 rounded border ${
