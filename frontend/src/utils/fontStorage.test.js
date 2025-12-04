@@ -13,7 +13,7 @@ import { IDBFactory } from 'fake-indexeddb';
 
 beforeEach(() => {
   // Reset IndexedDB before each test
-  global.indexedDB = new IDBFactory();
+  globalThis.indexedDB = new IDBFactory();
 });
 
 describe('fontStorage', () => {

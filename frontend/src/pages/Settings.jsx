@@ -6,7 +6,12 @@ import {
   saveCustomFont,
   getCustomFonts,
   deleteCustomFont,
+  MIN_FONT_SIZE,
+  MAX_FONT_SIZE,
+  MIN_LINE_HEIGHT,
+  MAX_LINE_HEIGHT,
 } from '../utils/fontStorage';
+import { getCustomFontKey } from '../utils/fontUtils';
 
 const Settings = () => {
   const {
@@ -19,6 +24,8 @@ const Settings = () => {
     setFontSizeOverride,
     resetFontSizeOverride,
     getCurrentFontSettings,
+    fontLoadError,
+    clearFontLoadError,
   } = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -449,15 +456,15 @@ const Settings = () => {
 
     // Validate font size
     const sizeNum = parseInt(fontSize);
-    if (isNaN(sizeNum) || sizeNum < 8 || sizeNum > 72) {
-      setError('Font size must be between 8 and 72 pixels');
+    if (isNaN(sizeNum) || sizeNum < MIN_FONT_SIZE || sizeNum > MAX_FONT_SIZE) {
+      setError(`Font size must be between ${MIN_FONT_SIZE} and ${MAX_FONT_SIZE} pixels`);
       return;
     }
 
     // Validate line height
     const lhNum = parseFloat(fontLineHeight);
-    if (isNaN(lhNum) || lhNum < 0.5 || lhNum > 3.0) {
-      setError('Line height must be between 0.5 and 3.0');
+    if (isNaN(lhNum) || lhNum < MIN_LINE_HEIGHT || lhNum > MAX_LINE_HEIGHT) {
+      setError(`Line height must be between ${MIN_LINE_HEIGHT} and ${MAX_LINE_HEIGHT}`);
       return;
     }
 
@@ -502,10 +509,6 @@ const Settings = () => {
     }
   };
 
-  const getCustomFontKey = (fontName) => {
-    return `custom-${fontName.toLowerCase().replace(/\s+/g, '-')}`;
-  };
-
   const handleActivateCustomFont = (fontName) => {
     const fontKey = getCustomFontKey(fontName);
     setFont(fontKey);
@@ -544,6 +547,23 @@ const Settings = () => {
             isDark ? 'bg-gruvbox-dark-green text-gruvbox-dark-bg' : 'bg-gruvbox-light-green text-gruvbox-light-bg'
           }`}>
             {success}
+          </div>
+        )}
+
+        {fontLoadError && (
+          <div className={`mb-4 p-4 rounded flex items-center justify-between ${
+            isDark ? 'bg-gruvbox-dark-yellow text-gruvbox-dark-bg' : 'bg-gruvbox-light-yellow text-gruvbox-light-bg'
+          }`}>
+            <span>{fontLoadError}</span>
+            <button
+              type="button"
+              onClick={clearFontLoadError}
+              className={`ml-4 px-2 py-1 rounded text-xs ${
+                isDark ? 'bg-gruvbox-dark-bg text-gruvbox-dark-fg' : 'bg-gruvbox-light-bg text-gruvbox-light-fg'
+              }`}
+            >
+              Dismiss
+            </button>
           </div>
         )}
 

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { AVAILABLE_FONTS, DEFAULT_FONT } from '../config/fonts';
 import { getCustomFonts, generateFontFaceCSS } from '../utils/fontStorage';
+import { getCustomFontKey } from '../utils/fontUtils';
 
 const ThemeContext = createContext(null);
 
@@ -30,6 +31,7 @@ export const ThemeProvider = ({ children }) => {
   });
 
   const [allFonts, setAllFonts] = useState(AVAILABLE_FONTS);
+  const [fontLoadError, setFontLoadError] = useState(null);
 
   // Load custom fonts from IndexedDB
   useEffect(() => {
@@ -39,7 +41,7 @@ export const ThemeProvider = ({ children }) => {
         const customFontsMap = {};
 
         fonts.forEach((font) => {
-          const fontKey = `custom-${font.name.toLowerCase().replace(/\s+/g, '-')}`;
+          const fontKey = getCustomFontKey(font.name);
           customFontsMap[fontKey] = {
             name: font.name,
             description: 'Custom uploaded font',
@@ -52,8 +54,19 @@ export const ThemeProvider = ({ children }) => {
         });
 
         setAllFonts({ ...AVAILABLE_FONTS, ...customFontsMap });
+        setFontLoadError(null); // Clear any previous errors
       } catch (err) {
         console.error('Failed to load custom fonts:', err);
+        
+        // Set user-friendly error message
+        if (err.message?.includes('IndexedDB is not available')) {
+          setFontLoadError('Custom fonts are not available in this browser. Google Fonts will still work.');
+        } else {
+          setFontLoadError('Failed to load custom fonts. They may not display correctly.');
+        }
+        
+        // Fall back to Google Fonts only
+        setAllFonts(AVAILABLE_FONTS);
       }
     };
 
@@ -164,7 +177,7 @@ export const ThemeProvider = ({ children }) => {
       const customFontsMap = {};
 
       fonts.forEach((font) => {
-        const fontKey = `custom-${font.name.toLowerCase().replace(/\s+/g, '-')}`;
+        const fontKey = getCustomFontKey(font.name);
         customFontsMap[fontKey] = {
           name: font.name,
           description: 'Custom uploaded font',
@@ -199,6 +212,8 @@ export const ThemeProvider = ({ children }) => {
         setFontSizeOverride,
         resetFontSizeOverride,
         getCurrentFontSettings,
+        fontLoadError,
+        clearFontLoadError: () => setFontLoadError(null),
       }}
     >
       {children}

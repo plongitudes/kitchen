@@ -3,16 +3,51 @@
  * Stores user-uploaded .woff2 font files with their configuration
  */
 
+// Database configuration
 const DB_NAME = 'CustomFontsDB';
 const STORE_NAME = 'fonts';
 const DB_VERSION = 1;
-const MAX_RECOMMENDED_SIZE = 500 * 1024; // 500KB
+
+/**
+ * Database Migration Strategy:
+ * 
+ * When schema changes are needed:
+ * 1. Increment DB_VERSION
+ * 2. Add migration logic in onupgradeneeded handler
+ * 3. Check event.oldVersion to determine which migrations to run
+ * 
+ * Example for version 2:
+ * if (event.oldVersion < 2) {
+ *   const store = transaction.objectStore(STORE_NAME);
+ *   store.createIndex('uploadedAt', 'uploadedAt', { unique: false });
+ * }
+ */
+
+// Font size constraints
+export const MIN_FONT_SIZE = 8;  // pixels
+export const MAX_FONT_SIZE = 72; // pixels
+export const MIN_LINE_HEIGHT = 0.5;
+export const MAX_LINE_HEIGHT = 3.0;
+export const MAX_RECOMMENDED_SIZE = 500 * 1024; // 500KB
+
+/**
+ * Check if IndexedDB is available in the current environment
+ * @returns {boolean}
+ */
+export const isIndexedDBAvailable = () => {
+  return typeof indexedDB !== 'undefined';
+};
 
 /**
  * Initialize IndexedDB for font storage
  * @returns {Promise<IDBDatabase>}
+ * @throws {Error} If IndexedDB is not available
  */
 export const initFontDB = () => {
+  if (!isIndexedDBAvailable()) {
+    return Promise.reject(new Error('IndexedDB is not available in this environment'));
+  }
+
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
@@ -50,17 +85,17 @@ const validateFont = (font) => {
 
   if (
     typeof font.lineHeight !== 'number' ||
-    font.lineHeight < 0.5 ||
-    font.lineHeight > 3.0
+    font.lineHeight < MIN_LINE_HEIGHT ||
+    font.lineHeight > MAX_LINE_HEIGHT
   ) {
-    throw new Error('Line height must be a number between 0.5 and 3.0');
+    throw new Error(`Line height must be a number between ${MIN_LINE_HEIGHT} and ${MAX_LINE_HEIGHT}`);
   }
 
   // Check file size and warn if large
   const sizeInKB = font.data.byteLength / 1024;
   if (font.data.byteLength > MAX_RECOMMENDED_SIZE) {
     console.warn(
-      `Font "${font.name}" is ${sizeInKB.toFixed(1)}KB, which may impact performance. Recommended max: 500KB`
+      `Font "${font.name}" is ${sizeInKB.toFixed(1)}KB, which may impact performance. Recommended max: ${MAX_RECOMMENDED_SIZE / 1024}KB`
     );
   }
 };
@@ -69,6 +104,7 @@ const validateFont = (font) => {
  * Save a custom font to IndexedDB
  * @param {Object} font - Font object with name, data (ArrayBuffer), size, lineHeight
  * @returns {Promise<boolean>}
+ * @throws {Error} If quota is exceeded or other storage errors occur
  */
 export const saveCustomFont = async (font) => {
   validateFont(font);
@@ -90,7 +126,18 @@ export const saveCustomFont = async (font) => {
     const request = store.put(fontRecord);
 
     request.onsuccess = () => resolve(true);
-    request.onerror = () => reject(request.error);
+    request.onerror = () => {
+      const error = request.error;
+      
+      // Handle quota exceeded error specifically
+      if (error?.name === 'QuotaExceededError') {
+        reject(new Error(
+          'Storage quota exceeded. Please delete some custom fonts or choose a smaller file.'
+        ));
+      } else {
+        reject(error);
+      }
+    };
   });
 };
 
