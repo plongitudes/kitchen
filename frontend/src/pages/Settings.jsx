@@ -4,7 +4,7 @@ import api from '../services/api';
 import ConfirmModal from '../components/ConfirmModal';
 
 const Settings = () => {
-  const { isDark, toggleTheme } = useTheme();
+  const { isDark, toggleTheme, currentFont, setFont, availableFonts } = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -866,6 +866,41 @@ const Settings = () => {
               >
                 Toggle Theme
               </button>
+            </div>
+
+            {/* Font Selection */}
+            <div className={`flex items-center justify-between p-4 rounded border ${
+              isDark
+                ? 'bg-gruvbox-dark-bg border-gruvbox-dark-gray'
+                : 'bg-gruvbox-light-bg border-gruvbox-light-gray'
+            }`}>
+              <div>
+                <p className={`font-semibold ${
+                  isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'
+                }`}>
+                  UI Font
+                </p>
+                <p className={`text-sm ${
+                  isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'
+                }`}>
+                  {availableFonts[currentFont]?.name} - {availableFonts[currentFont]?.description}
+                </p>
+              </div>
+              <select
+                value={currentFont}
+                onChange={(e) => setFont(e.target.value)}
+                className={`px-4 py-2 rounded border ${
+                  isDark
+                    ? 'bg-gruvbox-dark-bg border-gruvbox-dark-gray text-gruvbox-dark-fg'
+                    : 'bg-gruvbox-light-bg border-gruvbox-light-gray text-gruvbox-light-fg'
+                }`}
+              >
+                {Object.entries(availableFonts).map(([key, font]) => (
+                  <option key={key} value={key}>
+                    {font.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
