@@ -206,7 +206,6 @@ const Settings = () => {
 
       const response = await api.post(`/recipes/import-multiple-json`, formData, {
         headers: {
-          Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',
         },
       });
@@ -324,7 +323,6 @@ const Settings = () => {
 
       await api.post(`/backup/upload`, formData, {
         headers: {
-          Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',
         },
       });
@@ -552,7 +550,6 @@ const Settings = () => {
                         const response = await api.post(
                           `/discord/sync-user`,
                           { discord_user_id: discordUserId },
-                          { headers: { Authorization: `Bearer ${token}` } }
                         );
                         setSuccess(response.data.message);
                         input.value = '';

@@ -7,7 +7,7 @@ import unusedImports from 'eslint-plugin-unused-imports'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'node_modules', '.vite']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -45,6 +45,13 @@ export default defineConfig([
       // Enable React rules to detect JSX usage
       'react/jsx-uses-react': 'error',
       'react/jsx-uses-vars': 'error',
+      // Enforce using centralized API instance instead of direct axios imports
+      'no-restricted-imports': ['error', {
+        paths: [{
+          name: 'axios',
+          message: 'Import api from "../services/api" instead of using axios directly. The api instance has interceptors for auth and runtime config.',
+        }],
+      }],
     },
   },
 ])
