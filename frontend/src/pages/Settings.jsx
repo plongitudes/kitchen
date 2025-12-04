@@ -2,6 +2,11 @@ import { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
 import ConfirmModal from '../components/ConfirmModal';
+import {
+  saveCustomFont,
+  getCustomFonts,
+  deleteCustomFont,
+} from '../utils/fontStorage';
 
 const Settings = () => {
   const { isDark, toggleTheme, currentFont, setFont, availableFonts } = useTheme();
@@ -34,6 +39,13 @@ const Settings = () => {
     variant: 'warning',
     confirmText: 'Confirm',
   });
+
+  // Custom font state
+  const [customFonts, setCustomFonts] = useState([]);
+  const [uploadingFont, setUploadingFont] = useState(false);
+  const [fontName, setFontName] = useState('');
+  const [fontSize, setFontSize] = useState('14');
+  const [fontLineHeight, setFontLineHeight] = useState('1.2');
 
   const timezones = [
     'UTC',
@@ -86,10 +98,20 @@ const Settings = () => {
     }
   };
 
+  const loadCustomFonts = async () => {
+    try {
+      const fonts = await getCustomFonts();
+      setCustomFonts(fonts);
+    } catch (err) {
+      console.error('Failed to load custom fonts:', err);
+    }
+  };
+
   useEffect(() => {
     loadSettings();
     checkDiscordStatus();
     loadBackups();
+    loadCustomFonts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -364,6 +386,79 @@ const Settings = () => {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const handleFontUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file extension
+    if (!file.name.endsWith('.woff2')) {
+      setError('Only .woff2 font files are allowed');
+      event.target.value = '';
+      return;
+    }
+
+    // Validate font name is provided
+    if (!fontName.trim()) {
+      setError('Please enter a font name before uploading');
+      event.target.value = '';
+      return;
+    }
+
+    // Validate font size
+    const sizeNum = parseInt(fontSize);
+    if (isNaN(sizeNum) || sizeNum < 8 || sizeNum > 72) {
+      setError('Font size must be between 8 and 72 pixels');
+      event.target.value = '';
+      return;
+    }
+
+    // Validate line height
+    const lhNum = parseFloat(fontLineHeight);
+    if (isNaN(lhNum) || lhNum < 0.5 || lhNum > 3.0) {
+      setError('Line height must be between 0.5 and 3.0');
+      event.target.value = '';
+      return;
+    }
+
+    setUploadingFont(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      // Read file as ArrayBuffer
+      const arrayBuffer = await file.arrayBuffer();
+
+      // Save to IndexedDB
+      await saveCustomFont({
+        name: fontName.trim(),
+        data: arrayBuffer,
+        size: `${sizeNum}px`,
+        lineHeight: lhNum,
+      });
+
+      setSuccess(`Custom font "${fontName}" uploaded successfully!`);
+      setFontName('');
+      setFontSize('14');
+      setFontLineHeight('1.2');
+      await loadCustomFonts();
+    } catch (err) {
+      setError(err.message || 'Failed to upload custom font');
+    } finally {
+      setUploadingFont(false);
+      event.target.value = '';
+    }
+  };
+
+  const handleDeleteCustomFont = async (name) => {
+    try {
+      await deleteCustomFont(name);
+      setSuccess(`Deleted custom font "${name}"`);
+      await loadCustomFonts();
+    } catch (err) {
+      setError(`Failed to delete font: ${err.message}`);
+    }
   };
 
   if (loading) {
@@ -901,6 +996,152 @@ const Settings = () => {
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* Custom Font Upload */}
+            <div className={`mt-4 p-4 rounded border ${
+              isDark
+                ? 'bg-gruvbox-dark-bg border-gruvbox-dark-gray'
+                : 'bg-gruvbox-light-bg border-gruvbox-light-gray'
+            }`}>
+              <h3 className={`font-semibold mb-2 ${
+                isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'
+              }`}>
+                Upload Custom Font (.woff2)
+              </h3>
+              <p className={`text-xs mb-3 ${
+                isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'
+              }`}>
+                Upload your own .woff2 font file. Note: Custom fonts may not render correctly and could cause layout issues. Files over 500KB may impact performance.
+              </p>
+
+              <div className="space-y-3">
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className={`block text-xs mb-1 ${
+                      isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'
+                    }`}>
+                      Font Name
+                    </label>
+                    <input
+                      type="text"
+                      value={fontName}
+                      onChange={(e) => setFontName(e.target.value)}
+                      placeholder="My Font"
+                      className={`w-full px-2 py-1 rounded border text-sm ${
+                        isDark
+                          ? 'bg-gruvbox-dark-bg-soft border-gruvbox-dark-gray text-gruvbox-dark-fg'
+                          : 'bg-gruvbox-light-bg-soft border-gruvbox-light-gray text-gruvbox-light-fg'
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-xs mb-1 ${
+                      isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'
+                    }`}>
+                      Size (px)
+                    </label>
+                    <input
+                      type="number"
+                      value={fontSize}
+                      onChange={(e) => setFontSize(e.target.value)}
+                      min="8"
+                      max="72"
+                      className={`w-full px-2 py-1 rounded border text-sm ${
+                        isDark
+                          ? 'bg-gruvbox-dark-bg-soft border-gruvbox-dark-gray text-gruvbox-dark-fg'
+                          : 'bg-gruvbox-light-bg-soft border-gruvbox-light-gray text-gruvbox-light-fg'
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-xs mb-1 ${
+                      isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'
+                    }`}>
+                      Line Height
+                    </label>
+                    <input
+                      type="number"
+                      value={fontLineHeight}
+                      onChange={(e) => setFontLineHeight(e.target.value)}
+                      min="0.5"
+                      max="3.0"
+                      step="0.1"
+                      className={`w-full px-2 py-1 rounded border text-sm ${
+                        isDark
+                          ? 'bg-gruvbox-dark-bg-soft border-gruvbox-dark-gray text-gruvbox-dark-fg'
+                          : 'bg-gruvbox-light-bg-soft border-gruvbox-light-gray text-gruvbox-light-fg'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                <label className={`block px-3 py-2 rounded text-sm text-center transition cursor-pointer ${
+                  uploadingFont
+                    ? isDark
+                      ? 'bg-gruvbox-dark-gray cursor-not-allowed'
+                      : 'bg-gruvbox-light-gray cursor-not-allowed'
+                    : isDark
+                      ? 'bg-gruvbox-dark-purple hover:bg-gruvbox-dark-purple-bright'
+                      : 'bg-gruvbox-light-purple hover:bg-gruvbox-light-purple-bright'
+                }`}>
+                  {uploadingFont ? 'Uploading...' : 'Choose .woff2 File'}
+                  <input
+                    type="file"
+                    accept=".woff2"
+                    onChange={handleFontUpload}
+                    disabled={uploadingFont}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              {/* List of custom fonts */}
+              {customFonts.length > 0 && (
+                <div className="mt-4">
+                  <h4 className={`text-sm font-semibold mb-2 ${
+                    isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'
+                  }`}>
+                    Uploaded Custom Fonts
+                  </h4>
+                  <div className="space-y-1">
+                    {customFonts.map((font) => (
+                      <div
+                        key={font.name}
+                        className={`flex items-center justify-between p-2 rounded border text-sm ${
+                          isDark
+                            ? 'bg-gruvbox-dark-bg-soft border-gruvbox-dark-gray'
+                            : 'bg-gruvbox-light-bg-soft border-gruvbox-light-gray'
+                        }`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className={`font-medium truncate ${
+                            isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'
+                          }`}>
+                            {font.name}
+                          </div>
+                          <div className={`text-xs ${
+                            isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'
+                          }`}>
+                            {font.size} • {font.lineHeight} line height • {formatSize(font.data.byteLength)}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCustomFont(font.name)}
+                          className={`ml-2 px-2 py-1 rounded text-xs transition ${
+                            isDark
+                              ? 'bg-gruvbox-dark-red hover:bg-gruvbox-dark-red-bright'
+                              : 'bg-gruvbox-light-red hover:bg-gruvbox-light-red-bright'
+                          }`}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
