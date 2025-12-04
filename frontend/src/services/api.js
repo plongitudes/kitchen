@@ -13,6 +13,16 @@ api.interceptors.request.use(
     // Get API URL from runtime config (injected at container startup) or fall back to localhost
     // This is evaluated at request time, ensuring window.APP_CONFIG is available
     const apiUrl = window.APP_CONFIG?.API_URL || 'http://localhost:8000';
+    
+    // Debug logging (remove after fixing)
+    if (!window.APP_CONFIG) {
+      console.error('❌ window.APP_CONFIG is undefined!');
+    } else if (!window.APP_CONFIG.API_URL) {
+      console.error('❌ window.APP_CONFIG exists but API_URL is missing:', window.APP_CONFIG);
+    } else {
+      console.log('✅ Using API URL:', apiUrl);
+    }
+    
     config.baseURL = apiUrl;
     
     const token = localStorage.getItem('access_token');
