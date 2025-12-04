@@ -9,7 +9,7 @@ import {
 } from '../utils/fontStorage';
 
 const Settings = () => {
-  const { isDark, toggleTheme, currentFont, setFont, availableFonts } = useTheme();
+  const { isDark, toggleTheme, currentFont, setFont, availableFonts, reloadCustomFonts } = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -443,6 +443,7 @@ const Settings = () => {
       setFontSize('14');
       setFontLineHeight('1.2');
       await loadCustomFonts();
+      await reloadCustomFonts(); // Reload fonts in ThemeContext
     } catch (err) {
       setError(err.message || 'Failed to upload custom font');
     } finally {
@@ -456,6 +457,7 @@ const Settings = () => {
       await deleteCustomFont(name);
       setSuccess(`Deleted custom font "${name}"`);
       await loadCustomFonts();
+      await reloadCustomFonts(); // Reload fonts in ThemeContext
     } catch (err) {
       setError(`Failed to delete font: ${err.message}`);
     }
