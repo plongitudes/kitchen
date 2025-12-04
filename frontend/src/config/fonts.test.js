@@ -14,10 +14,6 @@ describe('Font Configuration', () => {
       'tiny5',
       'vt323',
       'pressStart2p',
-      'dotGothic16',
-      'shareTechMono',
-      'ibmPlexMono',
-      'courierPrime',
     ];
 
     expectedFonts.forEach(fontKey => {
@@ -27,6 +23,10 @@ describe('Font Configuration', () => {
 
   it('should not include removed fonts', () => {
     expect(AVAILABLE_FONTS.micro5).toBeUndefined();
+    expect(AVAILABLE_FONTS.dotGothic16).toBeUndefined();
+    expect(AVAILABLE_FONTS.shareTechMono).toBeUndefined();
+    expect(AVAILABLE_FONTS.ibmPlexMono).toBeUndefined();
+    expect(AVAILABLE_FONTS.courierPrime).toBeUndefined();
   });
 
   it('should have all required properties for each font', () => {
