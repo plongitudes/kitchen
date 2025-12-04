@@ -1,9 +1,30 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+// Generate timestamp for build artifacts (YYYYMMDD-HHMMSS format)
+const buildTimestamp = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  return `${year}${month}${day}-${hours}${minutes}${seconds}`;
+};
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      output: {
+        entryFileNames: `assets/[name]-${buildTimestamp()}.js`,
+        chunkFileNames: `assets/[name]-${buildTimestamp()}.js`,
+        assetFileNames: `assets/[name]-${buildTimestamp()}.[ext]`,
+      },
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',
