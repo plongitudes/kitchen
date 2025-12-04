@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import axios from 'axios';
+import api from '../services/api';
 import ConfirmModal from '../components/ConfirmModal';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const Settings = () => {
   const { isDark, toggleTheme } = useTheme();
@@ -55,9 +53,7 @@ const Settings = () => {
     try {
       setLoading(true);
       setError(null);
-      const token = localStorage.getItem('access_token');
-      const response = await axios.get(`${API_URL}/settings`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.get(`/settings`, {
       });
 
       const data = response.data;
@@ -72,9 +68,7 @@ const Settings = () => {
 
   const checkDiscordStatus = async () => {
     try {
-      const token = localStorage.getItem('access_token');
-      const response = await axios.get(`${API_URL}/discord/status`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.get(`/discord/status`, {
       });
       setDiscordConnected(response.data.connected);
     } catch (err) {
@@ -84,9 +78,7 @@ const Settings = () => {
 
   const loadBackups = async () => {
     try {
-      const token = localStorage.getItem('access_token');
-      const response = await axios.get(`${API_URL}/backup/list`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.get(`/backup/list`, {
       });
       setBackups(response.data);
     } catch (err) {
@@ -108,15 +100,13 @@ const Settings = () => {
     setSuccess(null);
 
     try {
-      const token = localStorage.getItem('access_token');
-      await axios.put(
-        `${API_URL}/settings`,
+      await api.put(
+        `/settings`,
         {
           notification_time: notificationTime,
           notification_timezone: timezone,
         },
         {
-          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
@@ -134,12 +124,10 @@ const Settings = () => {
     setSuccess(null);
 
     try {
-      const token = localStorage.getItem('access_token');
-      const response = await axios.post(
-        `${API_URL}/discord/reconnect`,
+      const response = await api.post(
+        `/discord/reconnect`,
         {},
         {
-          headers: { Authorization: `Bearer ${token}` },
         }
       );
       setSuccess(response.data.message);
@@ -157,12 +145,10 @@ const Settings = () => {
     setSuccess(null);
 
     try {
-      const token = localStorage.getItem('access_token');
-      const response = await axios.post(
-        `${API_URL}/discord/test-notifications`,
+      const response = await api.post(
+        `/discord/test-notifications`,
         {},
         {
-          headers: { Authorization: `Bearer ${token}` },
         }
       );
       setSuccess(response.data.message);
@@ -178,9 +164,7 @@ const Settings = () => {
     setError(null);
 
     try {
-      const token = localStorage.getItem('access_token');
-      const response = await axios.get(`${API_URL}/recipes/export-all`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.get(`/recipes/export-all`, {
         responseType: 'blob',
       });
 
@@ -217,11 +201,10 @@ const Settings = () => {
     setSuccess(null);
 
     try {
-      const token = localStorage.getItem('access_token');
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await axios.post(`${API_URL}/recipes/import-multiple-json`, formData, {
+      const response = await api.post(`/recipes/import-multiple-json`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',
@@ -250,9 +233,7 @@ const Settings = () => {
     setSuccess(null);
 
     try {
-      const token = localStorage.getItem('access_token');
-      const response = await axios.post(`${API_URL}/backup/create`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.post(`/backup/create`, {}, {
       });
 
       setSuccess(`Backup created: ${response.data.filename}`);
@@ -266,9 +247,7 @@ const Settings = () => {
 
   const downloadBackup = async (filename) => {
     try {
-      const token = localStorage.getItem('access_token');
-      const response = await axios.get(`${API_URL}/backup/download/${filename}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.get(`/backup/download/${filename}`, {
         responseType: 'blob',
       });
 
@@ -302,9 +281,7 @@ const Settings = () => {
     setSuccess(null);
 
     try {
-      const token = localStorage.getItem('access_token');
-      const response = await axios.post(`${API_URL}/backup/restore/${filename}`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.post(`/backup/restore/${filename}`, {}, {
       });
 
       if (response.data.reload_required) {
@@ -342,11 +319,10 @@ const Settings = () => {
     setSuccess(null);
 
     try {
-      const token = localStorage.getItem('access_token');
       const formData = new FormData();
       formData.append('file', file);
 
-      await axios.post(`${API_URL}/backup/upload`, formData, {
+      await api.post(`/backup/upload`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',
@@ -376,9 +352,7 @@ const Settings = () => {
 
   const performDelete = async (filename) => {
     try {
-      const token = localStorage.getItem('access_token');
-      await axios.delete(`${API_URL}/backup/${filename}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      await api.delete(`/backup/${filename}`, {
       });
 
       setSuccess(`Deleted ${filename}`);
@@ -575,9 +549,8 @@ const Settings = () => {
                       setError(null);
                       setSuccess(null);
                       try {
-                        const token = localStorage.getItem('access_token');
-                        const response = await axios.post(
-                          `${API_URL}/discord/sync-user`,
+                        const response = await api.post(
+                          `/discord/sync-user`,
                           { discord_user_id: discordUserId },
                           { headers: { Authorization: `Bearer ${token}` } }
                         );

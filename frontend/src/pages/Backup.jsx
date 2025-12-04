@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import axios from 'axios';
+import api from '../services/api';
 import ConfirmModal from '../components/ConfirmModal';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const Backup = () => {
   const { isDark } = useTheme();
@@ -27,9 +26,7 @@ const Backup = () => {
 
   const loadBackups = async () => {
     try {
-      const token = localStorage.getItem('access_token');
-      const response = await axios.get(`${API_URL}/backup/list`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.get(`/backup/list`, {
       });
       setBackups(response.data);
     } catch (err) {
@@ -43,9 +40,7 @@ const Backup = () => {
     setSuccess(null);
 
     try {
-      const token = localStorage.getItem('access_token');
-      const response = await axios.post(`${API_URL}/backup/create`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.post(`/backup/create`, {}, {
       });
 
       setSuccess(`Backup created: ${response.data.filename}`);
@@ -59,9 +54,7 @@ const Backup = () => {
 
   const downloadBackup = async (filename) => {
     try {
-      const token = localStorage.getItem('access_token');
-      const response = await axios.get(`${API_URL}/backup/download/${filename}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.get(`/backup/download/${filename}`, {
         responseType: 'blob',
       });
 
@@ -96,9 +89,7 @@ const Backup = () => {
     setSuccess(null);
 
     try {
-      const token = localStorage.getItem('access_token');
-      const response = await axios.post(`${API_URL}/backup/restore/${filename}`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.post(`/backup/restore/${filename}`, {}, {
       });
 
       // Check if reload is required
@@ -137,11 +128,10 @@ const Backup = () => {
     setSuccess(null);
 
     try {
-      const token = localStorage.getItem('access_token');
       const formData = new FormData();
       formData.append('file', file);
 
-      await axios.post(`${API_URL}/backup/upload`, formData, {
+      await api.post(`/backup/upload`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',
@@ -171,9 +161,7 @@ const Backup = () => {
 
   const performDelete = async (filename) => {
     try {
-      const token = localStorage.getItem('access_token');
-      await axios.delete(`${API_URL}/backup/${filename}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      await api.delete(`/backup/${filename}`, {
       });
 
       setSuccess(`Deleted ${filename}`);
