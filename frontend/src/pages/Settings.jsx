@@ -56,6 +56,7 @@ const Settings = () => {
   const [fontName, setFontName] = useState('');
   const [fontSize, setFontSize] = useState('14');
   const [fontLineHeight, setFontLineHeight] = useState('1.2');
+  const [selectedFontFile, setSelectedFontFile] = useState(null);
 
   // Font size override state (for current font)
   const [tempFontSize, setTempFontSize] = useState(null);
@@ -413,7 +414,7 @@ const Settings = () => {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
-  const handleFontUpload = async (event) => {
+  const handleFontFileSelect = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -424,10 +425,25 @@ const Settings = () => {
       return;
     }
 
+    setSelectedFontFile(file);
+    setError(null);
+    
+    // Auto-populate font name from filename if empty
+    if (!fontName.trim()) {
+      const baseName = file.name.replace('.woff2', '').replace(/[-_]/g, ' ');
+      setFontName(baseName);
+    }
+  };
+
+  const handleFontUpload = async () => {
+    if (!selectedFontFile) {
+      setError('Please choose a font file first');
+      return;
+    }
+
     // Validate font name is provided
     if (!fontName.trim()) {
-      setError('Please enter a font name before uploading');
-      event.target.value = '';
+      setError('Please enter a font name');
       return;
     }
 
@@ -435,7 +451,6 @@ const Settings = () => {
     const sizeNum = parseInt(fontSize);
     if (isNaN(sizeNum) || sizeNum < 8 || sizeNum > 72) {
       setError('Font size must be between 8 and 72 pixels');
-      event.target.value = '';
       return;
     }
 
@@ -443,7 +458,6 @@ const Settings = () => {
     const lhNum = parseFloat(fontLineHeight);
     if (isNaN(lhNum) || lhNum < 0.5 || lhNum > 3.0) {
       setError('Line height must be between 0.5 and 3.0');
-      event.target.value = '';
       return;
     }
 
@@ -453,7 +467,7 @@ const Settings = () => {
 
     try {
       // Read file as ArrayBuffer
-      const arrayBuffer = await file.arrayBuffer();
+      const arrayBuffer = await selectedFontFile.arrayBuffer();
 
       // Save to IndexedDB
       await saveCustomFont({
@@ -467,13 +481,13 @@ const Settings = () => {
       setFontName('');
       setFontSize('14');
       setFontLineHeight('1.2');
+      setSelectedFontFile(null);
       await loadCustomFonts();
       await reloadCustomFonts(); // Reload fonts in ThemeContext
     } catch (err) {
       setError(err.message || 'Failed to upload custom font');
     } finally {
       setUploadingFont(false);
-      event.target.value = '';
     }
   };
 
@@ -486,6 +500,16 @@ const Settings = () => {
     } catch (err) {
       setError(`Failed to delete font: ${err.message}`);
     }
+  };
+
+  const getCustomFontKey = (fontName) => {
+    return `custom-${fontName.toLowerCase().replace(/\s+/g, '-')}`;
+  };
+
+  const handleActivateCustomFont = (fontName) => {
+    const fontKey = getCustomFontKey(fontName);
+    setFont(fontKey);
+    setSuccess(`Activated custom font "${fontName}"`);
   };
 
   if (loading) {
@@ -1137,7 +1161,7 @@ const Settings = () => {
               <p className={`text-xs mb-3 ${
                 isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'
               }`}>
-                Upload your own .woff2 font file. Note: Custom fonts may not render correctly and could cause layout issues. Files over 500KB may impact performance.
+                Upload your own .woff2 font file. After upload, your custom font will appear in the UI Font dropdown above. Note: Custom fonts may not render correctly. Files over 500KB may impact performance.
               </p>
 
               <div className="space-y-3">
@@ -1201,24 +1225,43 @@ const Settings = () => {
                   </div>
                 </div>
 
-                <label className={`block px-3 py-2 rounded text-sm text-center transition cursor-pointer ${
-                  uploadingFont
-                    ? isDark
-                      ? 'bg-gruvbox-dark-gray cursor-not-allowed'
-                      : 'bg-gruvbox-light-gray cursor-not-allowed'
-                    : isDark
-                      ? 'bg-gruvbox-dark-purple hover:bg-gruvbox-dark-purple-bright'
-                      : 'bg-gruvbox-light-purple hover:bg-gruvbox-light-purple-bright'
-                }`}>
-                  {uploadingFont ? 'Uploading...' : 'Choose .woff2 File'}
-                  <input
-                    type="file"
-                    accept=".woff2"
-                    onChange={handleFontUpload}
-                    disabled={uploadingFont}
-                    className="hidden"
-                  />
-                </label>
+                <div className="flex gap-2">
+                  <label className={`flex-1 px-3 py-2 rounded text-sm text-center transition cursor-pointer ${
+                    uploadingFont
+                      ? isDark
+                        ? 'bg-gruvbox-dark-gray cursor-not-allowed'
+                        : 'bg-gruvbox-light-gray cursor-not-allowed'
+                      : isDark
+                        ? 'bg-gruvbox-dark-blue hover:bg-gruvbox-dark-blue-bright'
+                        : 'bg-gruvbox-light-blue hover:bg-gruvbox-light-blue-bright'
+                  }`}>
+                    {selectedFontFile ? `📁 ${selectedFontFile.name}` : '📂 Choose .woff2 File'}
+                    <input
+                      type="file"
+                      accept=".woff2"
+                      onChange={handleFontFileSelect}
+                      disabled={uploadingFont}
+                      className="hidden"
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={handleFontUpload}
+                    disabled={uploadingFont || !selectedFontFile}
+                    className={`flex-1 px-3 py-2 rounded text-sm transition ${
+                      uploadingFont || !selectedFontFile
+                        ? isDark
+                          ? 'bg-gruvbox-dark-gray cursor-not-allowed'
+                          : 'bg-gruvbox-light-gray cursor-not-allowed'
+                        : isDark
+                          ? 'bg-gruvbox-dark-green hover:bg-gruvbox-dark-green-bright'
+                          : 'bg-gruvbox-light-green hover:bg-gruvbox-light-green-bright'
+                    }`}
+                  >
+                    {uploadingFont ? 'Uploading...' : '⬆️ Upload Font'}
+                  </button>
+                </div>
               </div>
 
               {/* List of custom fonts */}
@@ -1244,6 +1287,13 @@ const Settings = () => {
                             isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'
                           }`}>
                             {font.name}
+                            {currentFont === getCustomFontKey(font.name) && (
+                              <span className={`ml-2 text-xs px-2 py-0.5 rounded ${
+                                isDark ? 'bg-gruvbox-dark-green text-gruvbox-dark-bg' : 'bg-gruvbox-light-green text-gruvbox-light-bg'
+                              }`}>
+                                Active
+                              </span>
+                            )}
                           </div>
                           <div className={`text-xs ${
                             isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'
@@ -1251,17 +1301,32 @@ const Settings = () => {
                             {font.size} • {font.lineHeight} line height • {formatSize(font.data.byteLength)}
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteCustomFont(font.name)}
-                          className={`ml-2 px-2 py-1 rounded text-xs transition ${
-                            isDark
-                              ? 'bg-gruvbox-dark-red hover:bg-gruvbox-dark-red-bright'
-                              : 'bg-gruvbox-light-red hover:bg-gruvbox-light-red-bright'
-                          }`}
-                        >
-                          Delete
-                        </button>
+                        <div className="flex gap-2 ml-2">
+                          {currentFont !== getCustomFontKey(font.name) && (
+                            <button
+                              type="button"
+                              onClick={() => handleActivateCustomFont(font.name)}
+                              className={`px-2 py-1 rounded text-xs transition ${
+                                isDark
+                                  ? 'bg-gruvbox-dark-blue hover:bg-gruvbox-dark-blue-bright'
+                                  : 'bg-gruvbox-light-blue hover:bg-gruvbox-light-blue-bright'
+                              }`}
+                            >
+                              Activate
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCustomFont(font.name)}
+                            className={`px-2 py-1 rounded text-xs transition ${
+                              isDark
+                                ? 'bg-gruvbox-dark-red hover:bg-gruvbox-dark-red-bright'
+                                : 'bg-gruvbox-light-red hover:bg-gruvbox-light-red-bright'
+                            }`}
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
