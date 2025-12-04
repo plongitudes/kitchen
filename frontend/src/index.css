@@ -29,6 +29,40 @@
 }
 
 @layer utilities {
+  /* Override Tailwind text sizes to scale with base font size */
+  /* Using em units so they scale proportionally with --font-size */
+  .text-xs {
+    font-size: 0.75em !important;  /* 75% of base font size */
+  }
+  
+  .text-sm {
+    font-size: 0.875em !important; /* 87.5% of base font size */
+  }
+  
+  .text-base {
+    font-size: 1em !important;     /* 100% of base font size */
+  }
+  
+  .text-lg {
+    font-size: 1.125em !important; /* 112.5% of base font size */
+  }
+  
+  .text-xl {
+    font-size: 1.25em !important;  /* 125% of base font size */
+  }
+  
+  .text-2xl {
+    font-size: 1.5em !important;   /* 150% of base font size */
+  }
+  
+  .text-3xl {
+    font-size: 1.875em !important; /* 187.5% of base font size */
+  }
+  
+  .text-4xl {
+    font-size: 2.25em !important;  /* 225% of base font size */
+  }
+
   @keyframes slide-in {
     from {
       transform: translateX(100%);
