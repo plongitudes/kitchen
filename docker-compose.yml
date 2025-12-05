@@ -19,7 +19,7 @@ services:
       retries: 5
 
   backend:
-    image: plongitudex/kitchen-backend:latest
+    image: plongitudex/kitchen-backend:${BACKEND_IMAGE_TAG:-latest}
     container_name: kitchen-backend
     restart: unless-stopped
     ports:
@@ -50,7 +50,7 @@ services:
       - kitchen-network
 
   frontend:
-    image: plongitudex/kitchen-frontend:latest
+    image: plongitudex/kitchen-frontend:${FRONTEND_IMAGE_TAG:-latest}
     container_name: kitchen-frontend
     environment:
       # API URL is injected at runtime (supports dynamic ports)
