@@ -1,0 +1,25 @@
+<!-- 
+  System 7 SVG Template
+  
+  Replace WIDTH and HEIGHT with pixel dimensions
+  Use exact hex colors from palette
+  Keep it simple - no gradients, filters, or effects
+  
+  Color Palette:
+  #000000 - Black (borders, text, active)
+  #FFFFFF - White (backgrounds, inverted)
+  #DDDDDD - Light gray (window chrome, buttons)
+  #888888 - Medium gray (shadows, disabled)
+  #F0F0F0 - Very light gray (hover)
+  #EEEEEE - Menu bar
+-->
+<svg width="WIDTH" height="HEIGHT" xmlns="http://www.w3.org/2000/svg">
+  <!-- Example: solid rectangle -->
+  <rect x="0" y="0" width="WIDTH" height="HEIGHT" fill="#FFFFFF"/>
+  
+  <!-- Example: 1px border -->
+  <rect x="0" y="0" width="WIDTH" height="1" fill="#000000"/>
+  <rect x="0" y="HEIGHT-1" width="WIDTH" height="1" fill="#000000"/>
+  <rect x="0" y="0" width="1" height="HEIGHT" fill="#000000"/>
+  <rect x="WIDTH-1" y="0" width="1" height="HEIGHT" fill="#000000"/>
+</svg>
