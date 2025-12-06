@@ -1,0 +1,111 @@
+/**
+ * System 7 UI - Global Styles
+ * 
+ * Core CSS custom properties and image rendering settings for pixel-perfect
+ * System 7 components.
+ */
+
+:root {
+  /* ==========================================
+     SCALING SYSTEM
+     ========================================== */
+  
+  /* Base "mac pixel" unit - scales with viewport width */
+  /* 0.2vw means at 1000px width, 1 mac-pixel = 2px */
+  --s7-pixel: max(1px, 0.2vw);
+  
+  /* Border widths */
+  --s7-border-thin: calc(1 * var(--s7-pixel));
+  --s7-border-thick: calc(3 * var(--s7-pixel));
+  
+  /* Component dimensions */
+  --s7-titlebar-height: calc(19 * var(--s7-pixel));
+  --s7-button-height: calc(20 * var(--s7-pixel));
+  --s7-checkbox-size: calc(12 * var(--s7-pixel));
+  --s7-scrollbar-width: calc(16 * var(--s7-pixel));
+  
+  /* Spacing */
+  --s7-spacing-xs: calc(2 * var(--s7-pixel));
+  --s7-spacing-sm: calc(4 * var(--s7-pixel));
+  --s7-spacing-md: calc(8 * var(--s7-pixel));
+  --s7-spacing-lg: calc(16 * var(--s7-pixel));
+  
+  /* Font sizing */
+  --s7-font-size-base: calc(12 * var(--s7-pixel));
+  --s7-font-size-small: calc(10 * var(--s7-pixel));
+  --s7-font-size-large: calc(14 * var(--s7-pixel));
+  
+  /* ==========================================
+     COLOR PALETTE
+     ========================================== */
+  
+  --s7-black: #000000;
+  --s7-white: #FFFFFF;
+  --s7-gray: #DDDDDD;
+  --s7-dark-gray: #888888;
+  --s7-light-gray: #F0F0F0;
+  --s7-menu-gray: #EEEEEE;
+  
+  /* Accent colors (rare usage) */
+  --s7-blue: #0000FF;
+  --s7-highlight: #000080;
+  
+  /* ==========================================
+     COMPONENT COLORS (Semantic)
+     ========================================== */
+  
+  --s7-window-bg: var(--s7-white);
+  --s7-window-border: var(--s7-black);
+  --s7-button-bg: var(--s7-white);
+  --s7-button-bg-hover: var(--s7-light-gray);
+  --s7-button-bg-pressed: var(--s7-black);
+  --s7-button-text: var(--s7-black);
+  --s7-button-text-pressed: var(--s7-white);
+  --s7-input-bg: var(--s7-white);
+  --s7-input-border: var(--s7-black);
+  --s7-menubar-bg: var(--s7-menu-gray);
+}
+
+/* ==========================================
+   PIXEL-PERFECT RENDERING
+   ========================================== */
+
+/* Prevent blur on scaled SVG assets */
+.s7-component,
+.s7-component img,
+.s7-component svg {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-crisp-edges;
+  image-rendering: -webkit-optimize-contrast;
+}
+
+/* Ensure crisp text rendering for pixel fonts */
+.s7-component {
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: grayscale;
+  font-smooth: never;
+}
+
+/* ==========================================
+   UTILITY CLASSES
+   ========================================== */
+
+.s7-no-select {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+}
+
+.s7-pixel-border {
+  border: var(--s7-border-thin) solid var(--s7-black);
+}
+
+.s7-pixel-border-thick {
+  border: var(--s7-border-thick) solid var(--s7-black);
+}
+
+.s7-inset {
+  box-shadow: inset var(--s7-border-thin) var(--s7-border-thin) 0 0 var(--s7-dark-gray);
+}

@@ -22,6 +22,7 @@ import GroceryListAll from './pages/GroceryListAll';
 import GroceryListDetail from './pages/GroceryListDetail';
 import Ingredients from './pages/Ingredients';
 import Settings from './pages/Settings';
+import System7Demo from './pages/System7Demo';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -44,6 +45,7 @@ function App() {
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/system7-demo" element={<System7Demo />} />
             <Route
               path="/"
               element={
