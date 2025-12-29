@@ -3,8 +3,24 @@
 @tailwind utilities;
 
 @layer base {
+  /* System 7 Font - uses CSS variables set by ThemeContext */
+  :root {
+    --font-ui: 'Silkscreen', 'Courier New', Monaco, monospace;
+    --font-size: 13px;
+    --line-height: 1.4;
+  }
+
   body {
     @apply bg-gruvbox-dark-bg text-gruvbox-dark-fg;
+    font-family: var(--font-ui);
+    font-size: var(--font-size);
+    line-height: var(--line-height);
+    /* Crisp pixel rendering */
+    -webkit-font-smoothing: none;
+    -moz-osx-font-smoothing: grayscale;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
   }
 
   body.light {
@@ -13,6 +29,72 @@
 }
 
 @layer utilities {
+  /* Override Tailwind text sizes to scale with base font size */
+  /* Using em units so they scale proportionally with --font-size */
+  .text-xs {
+    font-size: 0.75em !important;  /* 75% of base font size */
+  }
+  
+  .text-sm {
+    font-size: 0.875em !important; /* 87.5% of base font size */
+  }
+  
+  .text-base {
+    font-size: 1em !important;     /* 100% of base font size */
+  }
+  
+  .text-lg {
+    font-size: 1.125em !important; /* 112.5% of base font size */
+  }
+  
+  .text-xl {
+    font-size: 1.25em !important;  /* 125% of base font size */
+  }
+  
+  .text-2xl {
+    font-size: 1.5em !important;   /* 150% of base font size */
+  }
+  
+  .text-3xl {
+    font-size: 1.875em !important; /* 187.5% of base font size */
+  }
+  
+  .text-4xl {
+    font-size: 2.25em !important;  /* 225% of base font size */
+  }
+
+  /* Override Tailwind spacing to scale with base font size */
+  /* Using em units so gaps/margins scale proportionally */
+  
+  /* Gap utilities (for flex/grid) */
+  .gap-1 { gap: 0.25em !important; }
+  .gap-2 { gap: 0.5em !important; }
+  .gap-3 { gap: 0.75em !important; }
+  .gap-4 { gap: 1em !important; }
+  
+  /* Horizontal spacing (space-x-*) */
+  .space-x-1 > * + * { margin-left: 0.25em !important; }
+  .space-x-2 > * + * { margin-left: 0.5em !important; }
+  .space-x-3 > * + * { margin-left: 0.75em !important; }
+  .space-x-4 > * + * { margin-left: 1em !important; }
+  
+  /* Vertical spacing (space-y-*) */
+  .space-y-1 > * + * { margin-top: 0.25em !important; }
+  .space-y-2 > * + * { margin-top: 0.5em !important; }
+  .space-y-3 > * + * { margin-top: 0.75em !important; }
+  .space-y-4 > * + * { margin-top: 1em !important; }
+  
+  /* Individual margins */
+  .mb-1 { margin-bottom: 0.25em !important; }
+  .mb-2 { margin-bottom: 0.5em !important; }
+  .mb-3 { margin-bottom: 0.75em !important; }
+  .mb-4 { margin-bottom: 1em !important; }
+  .mb-6 { margin-bottom: 1.5em !important; }
+  
+  .mt-1 { margin-top: 0.25em !important; }
+  .mt-2 { margin-top: 0.5em !important; }
+  .mt-4 { margin-top: 1em !important; }
+
   @keyframes slide-in {
     from {
       transform: translateX(100%);
