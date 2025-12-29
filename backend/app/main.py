@@ -18,11 +18,24 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     """Application lifespan manager for startup and shutdown."""
     logger.info("Starting application lifespan...")
+
+    # Clear settings cache and get fresh values to ensure we have latest env vars
+    # This helps with Docker environments where env vars may be injected after module load
+    get_settings.cache_clear()
+    fresh_settings = get_settings()
+
     # Startup: Initialize Discord bot from environment variables
     try:
         # Read Discord credentials from environment variables only
-        discord_token = settings.discord_bot_token
-        discord_channel_id = settings.discord_notification_channel_id
+        discord_token = fresh_settings.discord_bot_token
+        discord_channel_id = fresh_settings.discord_notification_channel_id
+
+        # Debug logging to diagnose Discord connection issues
+        logger.info(f"Discord config check - token present: {bool(discord_token)}, channel_id present: {bool(discord_channel_id)}")
+        if discord_token:
+            logger.info(f"Discord token length: {len(discord_token)} chars (starts with: {discord_token[:10]}...)")
+        if discord_channel_id:
+            logger.info(f"Discord channel ID: {discord_channel_id}")
 
         # Initialize bot if we have credentials
         if discord_token and discord_channel_id:
