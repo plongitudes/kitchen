@@ -30,12 +30,15 @@ async def lifespan(app: FastAPI):
         discord_token = fresh_settings.discord_bot_token
         discord_channel_id = fresh_settings.discord_notification_channel_id
 
-        # Debug logging to diagnose Discord connection issues
+        # Debug logging to diagnose connection issues
         logger.info(f"Discord config check - token present: {bool(discord_token)}, channel_id present: {bool(discord_channel_id)}")
         if discord_token:
             logger.info(f"Discord token length: {len(discord_token)} chars (starts with: {discord_token[:10]}...)")
         if discord_channel_id:
             logger.info(f"Discord channel ID: {discord_channel_id}")
+
+        # Log frontend URL for notification debugging
+        logger.info(f"Frontend URL for notifications: {fresh_settings.frontend_url}")
 
         # Initialize bot if we have credentials
         if discord_token and discord_channel_id:
