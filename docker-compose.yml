@@ -30,6 +30,8 @@ services:
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:?JWT_SECRET_KEY not set - see .env.example}
       - DEBUG=false
       - ENVIRONMENT=production
+      # Frontend URL for links in Discord notifications (e.g., https://kitchen.example.com)
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       # Optional: Discord notifications
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
       - DISCORD_NOTIFICATION_CHANNEL_ID=${DISCORD_NOTIFICATION_CHANNEL_ID:-}
