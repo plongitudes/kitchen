@@ -7,6 +7,8 @@ import {
   getCustomFont,
   arrayBufferToDataURL,
   generateFontFaceCSS,
+  isValidWOFF2,
+  sanitizeFontName,
 } from './fontStorage';
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
@@ -222,6 +224,93 @@ describe('fontStorage', () => {
       expect(css).toContain("font-family: 'TestFont'");
       expect(css).toContain("format('woff2')");
       expect(css).toContain('data:font/woff2;base64,');
+    });
+
+    it('should sanitize font names in generated CSS', () => {
+      const font = {
+        name: "Malicious'; } </style><script>alert('XSS')</script>",
+        data: new Uint8Array([1, 2, 3]).buffer,
+      };
+
+      const css = generateFontFaceCSS(font);
+
+      // Should strip dangerous characters, not just escape them
+      expect(css).not.toContain("'Malicious';");
+      expect(css).not.toContain('</style>');
+      expect(css).not.toContain('<script>');
+      // Should contain sanitized name (dangerous chars stripped)
+      expect(css).toContain('/stylescriptalertXSS/script');
+    });
+  });
+
+  describe('security functions', () => {
+    describe('isValidWOFF2', () => {
+      it('should accept valid WOFF2 files', () => {
+        // WOFF2 magic number: 0x774F4632 ("wOF2")
+        const validWoff2 = new Uint8Array([0x77, 0x4F, 0x46, 0x32, 0x00, 0x00]).buffer;
+        expect(isValidWOFF2(validWoff2)).toBe(true);
+      });
+
+      it('should reject files with wrong magic number', () => {
+        const invalidFile = new Uint8Array([0x00, 0x00, 0x00, 0x00]).buffer;
+        expect(isValidWOFF2(invalidFile)).toBe(false);
+      });
+
+      it('should reject files that are too small', () => {
+        const tooSmall = new Uint8Array([0x77, 0x4F]).buffer;
+        expect(isValidWOFF2(tooSmall)).toBe(false);
+      });
+
+      it('should reject empty buffer', () => {
+        const empty = new ArrayBuffer(0);
+        expect(isValidWOFF2(empty)).toBe(false);
+      });
+
+      it('should reject WOFF1 files', () => {
+        // WOFF1 magic number: 0x774F4646 ("wOFF")
+        const woff1 = new Uint8Array([0x77, 0x4F, 0x46, 0x46]).buffer;
+        expect(isValidWOFF2(woff1)).toBe(false);
+      });
+    });
+
+    describe('sanitizeFontName', () => {
+      it('should pass through clean font names', () => {
+        expect(sanitizeFontName('MyFont')).toBe('MyFont');
+        expect(sanitizeFontName('My Font Name')).toBe('My Font Name');
+        expect(sanitizeFontName('Font-123')).toBe('Font-123');
+      });
+
+      it('should strip single quotes', () => {
+        expect(sanitizeFontName("Font's Name")).toBe('Fonts Name');
+      });
+
+      it('should strip backslashes', () => {
+        expect(sanitizeFontName('Font\\Name')).toBe('FontName');
+      });
+
+      it('should remove control characters', () => {
+        expect(sanitizeFontName('Font\x00Name')).toBe('FontName');
+        expect(sanitizeFontName('Font\x1FName')).toBe('FontName');
+        expect(sanitizeFontName('Font\x7FName')).toBe('FontName');
+      });
+
+      it('should strip all dangerous characters from XSS attempt', () => {
+        const malicious = "'; } </style><script>alert('XSS')</script>";
+        const sanitized = sanitizeFontName(malicious);
+
+        // Should strip all dangerous characters
+        expect(sanitized).not.toContain("'");
+        expect(sanitized).not.toContain(';');
+        expect(sanitized).not.toContain('<');
+        expect(sanitized).not.toContain('>');
+        expect(sanitized).not.toContain('{');
+        expect(sanitized).not.toContain('}');
+        expect(sanitized).not.toContain('(');
+        expect(sanitized).not.toContain(')');
+        // Should preserve safe text
+        expect(sanitized).toContain('style');
+        expect(sanitized).toContain('script');
+      });
     });
   });
 });

@@ -6,10 +6,12 @@ import {
   saveCustomFont,
   getCustomFonts,
   deleteCustomFont,
+  isValidWOFF2,
   MIN_FONT_SIZE,
   MAX_FONT_SIZE,
   MIN_LINE_HEIGHT,
   MAX_LINE_HEIGHT,
+  MAX_FILE_SIZE,
 } from '../utils/fontStorage';
 import { getCustomFontKey } from '../utils/fontUtils';
 
@@ -448,6 +450,14 @@ const Settings = () => {
       return;
     }
 
+    // Validate file size
+    if (selectedFontFile.size > MAX_FILE_SIZE) {
+      const sizeMB = (selectedFontFile.size / (1024 * 1024)).toFixed(1);
+      const maxMB = (MAX_FILE_SIZE / (1024 * 1024)).toFixed(0);
+      setError(`Font file too large (${sizeMB}MB). Maximum size is ${maxMB}MB.`);
+      return;
+    }
+
     // Validate font name is provided
     if (!fontName.trim()) {
       setError('Please enter a font name');
@@ -475,6 +485,13 @@ const Settings = () => {
     try {
       // Read file as ArrayBuffer
       const arrayBuffer = await selectedFontFile.arrayBuffer();
+
+      // Validate WOFF2 magic number
+      if (!isValidWOFF2(arrayBuffer)) {
+        setError('Invalid font file. Please upload a valid .woff2 font.');
+        setUploadingFont(false);
+        return;
+      }
 
       // Save to IndexedDB
       await saveCustomFont({

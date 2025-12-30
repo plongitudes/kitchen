@@ -29,6 +29,36 @@ export const MAX_FONT_SIZE = 72; // pixels
 export const MIN_LINE_HEIGHT = 0.5;
 export const MAX_LINE_HEIGHT = 3.0;
 export const MAX_RECOMMENDED_SIZE = 500 * 1024; // 500KB
+export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB hard limit
+
+/**
+ * WOFF2 magic number bytes: 0x774F4632 ("wOF2")
+ */
+const WOFF2_MAGIC = [0x77, 0x4F, 0x46, 0x32];
+
+/**
+ * Validate that buffer contains a valid WOFF2 font file
+ * @param {ArrayBuffer} buffer - File data
+ * @returns {boolean}
+ */
+export const isValidWOFF2 = (buffer) => {
+  if (buffer.byteLength < 4) return false;
+  const bytes = new Uint8Array(buffer);
+  return WOFF2_MAGIC.every((magic, i) => bytes[i] === magic);
+};
+
+/**
+ * Sanitize font name for safe CSS injection
+ * Strips dangerous characters rather than escaping (CSS escaping is unreliable)
+ * @param {string} name - Raw font name
+ * @returns {string} - Sanitized name safe for CSS
+ */
+export const sanitizeFontName = (name) => {
+  return name
+    .replace(/['"\\<>{}();]/g, '') // Strip characters that could break CSS/HTML
+    .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
+    .trim();
+};
 
 /**
  * Check if IndexedDB is available in the current environment
@@ -202,16 +232,20 @@ export const deleteCustomFont = async (name) => {
 
 /**
  * Convert ArrayBuffer to base64 data URL for @font-face
+ * Uses chunked processing to avoid freezing the browser on large files
  * @param {ArrayBuffer} buffer - Font file data
  * @returns {string} - Data URL
  */
 export const arrayBufferToDataURL = (buffer) => {
   const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
+  const chunkSize = 0x8000; // 32KB chunks for performance
+  const chunks = [];
+
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    chunks.push(String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize)));
   }
-  const base64 = btoa(binary);
+
+  const base64 = btoa(chunks.join(''));
   return `data:font/woff2;base64,${base64}`;
 };
 
@@ -221,10 +255,11 @@ export const arrayBufferToDataURL = (buffer) => {
  * @returns {string} - CSS @font-face rule
  */
 export const generateFontFaceCSS = (font) => {
+  const safeName = sanitizeFontName(font.name);
   const dataURL = arrayBufferToDataURL(font.data);
   return `
     @font-face {
-      font-family: '${font.name}';
+      font-family: '${safeName}';
       src: url('${dataURL}') format('woff2');
       font-display: swap;
     }
