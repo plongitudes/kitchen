@@ -2,67 +2,38 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { recipeAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
-import RetireRecipeModal from '../components/RetireRecipeModal';
 import RecipeImportModal from '../components/RecipeImportModal';
 import Toast from '../components/Toast';
 
 const RecipeList = () => {
   const { isDark } = useTheme();
-  const [recipes, setRecipes] = useState([]);
+  const [index, setIndex] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState({ include_retired: false });
-  const [retireModal, setRetireModal] = useState({ isOpen: false, recipe: null });
+  const [includeRetired, setIncludeRetired] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeSection, setActiveSection] = useState('');
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [toast, setToast] = useState(null);
   const navigate = useNavigate();
 
-  const fetchRecipes = async () => {
+  const fetchIndex = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await recipeAPI.list(filter);
-      setRecipes(response.data);
+      const response = await recipeAPI.get(`index?include_retired=${includeRetired}`);
+      setIndex(response.data.index || {});
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to load recipes');
+      setError(err.response?.data?.detail || 'Failed to load recipe index');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchRecipes();
+    fetchIndex();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
-
-  const handleRetireClick = (recipe) => {
-    setRetireModal({ isOpen: true, recipe });
-  };
-
-  const handleRetireConfirm = async () => {
-    if (!retireModal.recipe) return;
-
-    try {
-      await recipeAPI.delete(retireModal.recipe.id);
-
-      // Remove from list immediately if not showing retired recipes
-      if (!filter.include_retired) {
-        setRecipes(recipes.filter(r => r.id !== retireModal.recipe.id));
-      } else {
-        // Update the recipe in place to show retired status
-        const response = await recipeAPI.get(retireModal.recipe.id);
-        setRecipes(recipes.map(r =>
-          r.id === retireModal.recipe.id ? response.data : r
-        ));
-      }
-    } catch (err) {
-      const errorMsg = err.response?.data?.detail || 'Failed to retire recipe';
-      setToast({
-        message: errorMsg,
-        type: 'error',
-      });
-    }
-  };
+  }, [includeRetired]);
 
   const handleJSONImport = async (event) => {
     const file = event.target.files?.[0];
@@ -89,7 +60,7 @@ const RecipeList = () => {
         message: response.data.message || 'Recipe imported successfully',
         type: 'success',
       });
-      fetchRecipes(); // Refresh list
+      fetchIndex(); // Refresh index
     } catch (err) {
       setToast({
         message: err.response?.data?.detail || 'Failed to import recipe',
@@ -100,13 +71,117 @@ const RecipeList = () => {
     }
   };
 
+  // Filter index based on search query
+  const filterIndex = (indexData, query) => {
+    if (!query.trim()) return indexData;
+
+    const lowerQuery = query.toLowerCase();
+    const filtered = {};
+
+    Object.entries(indexData).forEach(([letter, entries]) => {
+      const filteredEntries = entries.filter((entry) => {
+        // Check if entry name matches
+        if (entry.name.toLowerCase().includes(lowerQuery)) {
+          return true;
+        }
+
+        // For ingredient entries, check if any recipe name matches
+        if (entry.type === 'ingredient' && entry.recipes) {
+          return entry.recipes.some((recipe) =>
+            recipe.name.toLowerCase().includes(lowerQuery)
+          );
+        }
+
+        return false;
+      });
+
+      // For ingredient entries, filter recipe list to only matching recipes
+      const processedEntries = filteredEntries.map((entry) => {
+        if (entry.type === 'ingredient' && entry.recipes) {
+          // If ingredient name matches, show all recipes
+          if (entry.name.toLowerCase().includes(lowerQuery)) {
+            return entry;
+          }
+
+          // Otherwise, filter recipes
+          return {
+            ...entry,
+            recipes: entry.recipes.filter((recipe) =>
+              recipe.name.toLowerCase().includes(lowerQuery)
+            ),
+          };
+        }
+        return entry;
+      });
+
+      if (processedEntries.length > 0) {
+        filtered[letter] = processedEntries;
+      }
+    });
+
+    return filtered;
+  };
+
+  const filteredIndex = filterIndex(index, searchQuery);
+  const allLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('');
+  const availableLetters = Object.keys(filteredIndex);
+
+  // Scroll spy: Track which section is currently visible
+  useEffect(() => {
+    const handleScroll = () => {
+      const sections = allLetters
+        .map((letter) => ({
+          letter,
+          element: document.getElementById(`section-${letter}`),
+        }))
+        .filter((s) => s.element);
+
+      // Find the section that's currently most visible in the viewport
+      const currentSection = sections.find((section) => {
+        const rect = section.element.getBoundingClientRect();
+        // Section is considered active if its top is in the upper half of viewport
+        return rect.top >= 0 && rect.top <= window.innerHeight / 2;
+      });
+
+      if (currentSection) {
+        setActiveSection(currentSection.letter);
+      } else {
+        // If no section is in the upper half, find the one closest to top
+        const closestSection = sections.reduce((closest, section) => {
+          const rect = section.element.getBoundingClientRect();
+          if (!closest) return section;
+          
+          const closestRect = closest.element.getBoundingClientRect();
+          return Math.abs(rect.top) < Math.abs(closestRect.top) ? section : closest;
+        }, null);
+
+        if (closestSection) {
+          setActiveSection(closestSection.letter);
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    handleScroll(); // Initial check
+
+    return () => window.removeEventListener('scroll', handleScroll);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredIndex]);
+
+  const scrollToLetter = (letter) => {
+    const element = document.getElementById(`section-${letter}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   if (loading) {
     return (
       <div className={`p-8 flex items-center justify-center ${
         isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'
       }`}>
         <div className={`text-xl ${isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'}`}>
-          Loading recipes...
+          Loading recipe index...
         </div>
       </div>
     );
@@ -124,13 +199,16 @@ const RecipeList = () => {
     );
   }
 
+  const hasEntries = availableLetters.length > 0;
+
   return (
     <div className={`p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
+      {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h1 className={`text-3xl font-bold ${
           isDark ? 'text-gruvbox-dark-orange-bright' : 'text-gruvbox-light-orange-bright'
         }`}>
-          Recipes
+          Recipe Index
         </h1>
         <div className="flex gap-4">
           <label className={`flex items-center gap-2 ${
@@ -138,10 +216,8 @@ const RecipeList = () => {
           }`}>
             <input
               type="checkbox"
-              checked={filter.include_retired}
-              onChange={(e) =>
-                setFilter({ ...filter, include_retired: e.target.checked })
-              }
+              checked={includeRetired}
+              onChange={(e) => setIncludeRetired(e.target.checked)}
               className="rounded"
             />
             <span>Show retired</span>
@@ -182,7 +258,40 @@ const RecipeList = () => {
         </div>
       </div>
 
-      {recipes.length === 0 ? (
+      {/* Search Box */}
+      {Object.keys(index).length > 0 && (
+        <div className="mb-6">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search recipes or ingredients..."
+            className={`w-full p-3 rounded border ${
+              isDark
+                ? 'bg-gruvbox-dark-bg border-gruvbox-dark-gray text-gruvbox-dark-fg placeholder-gruvbox-dark-gray focus:border-gruvbox-dark-orange-bright'
+                : 'bg-gruvbox-light-bg border-gruvbox-light-gray text-gruvbox-light-fg placeholder-gruvbox-light-gray focus:border-gruvbox-light-orange-bright'
+            } focus:outline-none`}
+          />
+        </div>
+      )}
+
+      {!hasEntries && searchQuery ? (
+        <div className="text-center py-12">
+          <p className={`text-xl mb-4 ${isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'}`}>
+            No recipes match "{searchQuery}"
+          </p>
+          <button
+            onClick={() => setSearchQuery('')}
+            className={`px-6 py-3 rounded font-semibold transition ${
+              isDark
+                ? 'bg-gruvbox-dark-blue hover:bg-gruvbox-dark-blue-bright text-gruvbox-dark-bg'
+                : 'bg-gruvbox-light-blue hover:bg-gruvbox-light-blue-bright text-gruvbox-light-bg'
+            }`}
+          >
+            Clear search
+          </button>
+        </div>
+      ) : !hasEntries ? (
         <div className="text-center py-12">
           <p className={`text-xl mb-4 ${isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'}`}>
             No recipes yet.
@@ -199,109 +308,115 @@ const RecipeList = () => {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {recipes.map((recipe) => (
-            <div
-              key={recipe.id}
-              className={`p-6 rounded-lg border ${
-                recipe.retired_at
-                  ? isDark
-                    ? 'bg-gruvbox-dark-bg-hard border-gruvbox-dark-gray opacity-60'
-                    : 'bg-gruvbox-light-bg-hard border-gruvbox-light-gray opacity-60'
-                  : isDark
-                    ? 'bg-gruvbox-dark-bg-soft border-gruvbox-dark-gray hover:border-gruvbox-dark-orange transition'
-                    : 'bg-gruvbox-light-bg-soft border-gruvbox-light-gray hover:border-gruvbox-light-orange transition'
-              }`}
-            >
-              <div className="flex justify-between items-start mb-2">
-                <h3 className={`text-xl font-semibold ${
-                  isDark ? 'text-gruvbox-dark-orange-bright' : 'text-gruvbox-light-orange-bright'
-                }`}>
-                  {recipe.name}
-                </h3>
-                {recipe.retired_at && (
-                  <span className={`text-xs px-2 py-1 rounded ${
-                    isDark
-                      ? 'bg-gruvbox-dark-gray text-gruvbox-dark-bg'
-                      : 'bg-gruvbox-light-gray text-gruvbox-light-bg'
-                  }`}>
-                    Retired
-                  </span>
-                )}
-              </div>
-
-              {recipe.recipe_type && (
-                <div className={`text-sm mb-2 ${
-                  isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'
-                }`}>
-                  {recipe.recipe_type}
-                </div>
-              )}
-
-              <div className={`text-sm mb-4 ${
-                isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'
-              }`}>
-                {recipe.prep_time_minutes && (
-                  <span>Prep: {recipe.prep_time_minutes}min </span>
-                )}
-                {recipe.cook_time_minutes && (
-                  <span>Cook: {recipe.cook_time_minutes}min</span>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <Link
-                  to={`/recipes/${recipe.id}`}
-                  className={`flex-1 text-center px-3 py-2 rounded transition ${
-                    isDark
-                      ? 'bg-gruvbox-dark-blue hover:bg-gruvbox-dark-blue-bright'
-                      : 'bg-gruvbox-light-blue hover:bg-gruvbox-light-blue-bright'
-                  }`}
-                >
-                  View
-                </Link>
-                {!recipe.retired_at && (
-                  <>
-                    <Link
-                      to={`/recipes/${recipe.id}/edit`}
-                      className={`flex-1 text-center px-3 py-2 rounded transition ${
-                        isDark
-                          ? 'bg-gruvbox-dark-purple hover:bg-gruvbox-dark-purple-bright'
-                          : 'bg-gruvbox-light-purple hover:bg-gruvbox-light-purple-bright'
-                      }`}
-                    >
-                      Edit
-                    </Link>
-                    <button
-                      onClick={() => handleRetireClick(recipe)}
-                      className={`px-3 py-2 rounded transition ${
-                        isDark
-                          ? 'bg-gruvbox-dark-red hover:bg-gruvbox-dark-red-bright'
-                          : 'bg-gruvbox-light-red hover:bg-gruvbox-light-red-bright'
-                      }`}
-                    >
-                      Retire
-                    </button>
-                  </>
-                )}
-              </div>
+        <>
+          {/* Alphabet Navigation */}
+          <div className={`sticky top-0 z-10 py-4 mb-6 border-b ${
+            isDark 
+              ? 'bg-gruvbox-dark-bg border-gruvbox-dark-gray'
+              : 'bg-gruvbox-light-bg border-gruvbox-light-gray'
+          }`}>
+            <div className="flex flex-wrap gap-2 justify-center">
+              {allLetters.map((letter) => {
+                const isAvailable = availableLetters.includes(letter);
+                const isActive = letter === activeSection;
+                return (
+                  <button
+                    key={letter}
+                    onClick={() => isAvailable && scrollToLetter(letter)}
+                    disabled={!isAvailable}
+                    className={`px-3 py-1 rounded font-semibold transition ${
+                      isAvailable
+                        ? isActive
+                          ? isDark
+                            ? 'bg-gruvbox-dark-orange text-gruvbox-dark-bg ring-2 ring-gruvbox-dark-orange-bright cursor-pointer'
+                            : 'bg-gruvbox-light-orange text-gruvbox-light-bg ring-2 ring-gruvbox-light-orange-bright cursor-pointer'
+                          : isDark
+                            ? 'bg-gruvbox-dark-blue text-gruvbox-dark-bg hover:bg-gruvbox-dark-blue-bright cursor-pointer'
+                            : 'bg-gruvbox-light-blue text-gruvbox-light-bg hover:bg-gruvbox-light-blue-bright cursor-pointer'
+                        : isDark
+                          ? 'bg-gruvbox-dark-bg-hard text-gruvbox-dark-gray cursor-not-allowed opacity-40'
+                          : 'bg-gruvbox-light-bg-hard text-gruvbox-light-gray cursor-not-allowed opacity-40'
+                    }`}
+                  >
+                    {letter}
+                  </button>
+                );
+              })}
             </div>
-          ))}
-        </div>
-      )}
+          </div>
 
-      <RetireRecipeModal
-        recipe={retireModal.recipe}
-        isOpen={retireModal.isOpen}
-        onClose={() => setRetireModal({ isOpen: false, recipe: null })}
-        onConfirm={handleRetireConfirm}
-      />
+          {/* Index Content */}
+          <div className="space-y-8">
+            {allLetters.map((letter) => {
+              const entries = filteredIndex[letter];
+              if (!entries || entries.length === 0) return null;
+
+              return (
+                <div key={letter} id={`section-${letter}`} className="scroll-mt-24">
+                  {/* Letter Header */}
+                  <h2 className={`text-3xl font-bold mb-4 pb-2 border-b ${
+                    isDark
+                      ? 'text-gruvbox-dark-orange-bright border-gruvbox-dark-gray'
+                      : 'text-gruvbox-light-orange-bright border-gruvbox-light-gray'
+                  }`}>
+                    {letter}
+                  </h2>
+
+                  {/* Entries */}
+                  <div className="space-y-4">
+                    {entries.map((entry, index) => (
+                      <div key={index}>
+                        {entry.type === 'ingredient' ? (
+                          /* Ingredient Entry */
+                          <div>
+                            <div className={`text-lg font-bold ${
+                              isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'
+                            }`}>
+                              {entry.name}
+                            </div>
+                            <div className="ml-6 mt-1 space-y-1">
+                              {entry.recipes && entry.recipes.map((recipe) => (
+                                <div key={recipe.id}>
+                                  <Link
+                                    to={`/recipes/${recipe.id}`}
+                                    className={`hover:underline ${
+                                      isDark ? 'text-gruvbox-dark-blue-bright' : 'text-gruvbox-light-blue-bright'
+                                    }`}
+                                  >
+                                    {recipe.name}
+                                  </Link>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          /* Standalone Recipe Entry */
+                          <div>
+                            <Link
+                              to={`/recipes/${entry.id}`}
+                              className={`text-lg hover:underline ${
+                                isDark ? 'text-gruvbox-dark-blue-bright' : 'text-gruvbox-light-blue-bright'
+                              }`}
+                            >
+                              {entry.name}
+                            </Link>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       <RecipeImportModal
         isOpen={importModalOpen}
         onClose={() => {
           setImportModalOpen(false);
-          fetchRecipes(); // Refresh list after import
+          fetchIndex(); // Refresh index after import
         }}
       />
 

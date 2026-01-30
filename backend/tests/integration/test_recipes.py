@@ -123,9 +123,7 @@ class TestRecipeBasicOperations:
                         "order": 1,
                     }
                 ],
-                "instructions": [
-                    {"step_number": 1, "description": "Test step"}
-                ],
+                "instructions": [{"step_number": 1, "description": "Test step"}],
             },
         )
         recipe_id = create_response.json()["id"]
@@ -428,9 +426,7 @@ class TestRecipeIngredients:
         assert data["prep_note"] == "finely chopped"
 
         # Verify it appears in the list
-        list_response = async_authenticated_client.get(
-            f"/recipes/{recipe_id}/ingredients"
-        )
+        list_response = async_authenticated_client.get(f"/recipes/{recipe_id}/ingredients")
         ingredients = list_response.json()
         assert len(ingredients) == 3
 
@@ -476,9 +472,7 @@ class TestRecipeIngredients:
         assert response.status_code == 204
 
         # Verify it's removed from the list
-        list_response = async_authenticated_client.get(
-            f"/recipes/{recipe_id}/ingredients"
-        )
+        list_response = async_authenticated_client.get(f"/recipes/{recipe_id}/ingredients")
         ingredients = list_response.json()
         assert len(ingredients) == 1
         assert ingredients[0]["id"] != ingredient_id
@@ -552,9 +546,7 @@ class TestRecipeInstructions:
         assert data["description"] == "Step 3"
 
         # Verify it appears in the list
-        list_response = async_authenticated_client.get(
-            f"/recipes/{recipe_id}/instructions"
-        )
+        list_response = async_authenticated_client.get(f"/recipes/{recipe_id}/instructions")
         instructions = list_response.json()
         assert len(instructions) == 3
 
@@ -598,9 +590,7 @@ class TestRecipeInstructions:
         assert response.status_code == 204
 
         # Verify it's removed from the list
-        list_response = async_authenticated_client.get(
-            f"/recipes/{recipe_id}/instructions"
-        )
+        list_response = async_authenticated_client.get(f"/recipes/{recipe_id}/instructions")
         instructions = list_response.json()
         assert len(instructions) == 1
         assert instructions[0]["id"] != instruction_id
@@ -1037,10 +1027,283 @@ class TestRecipeFiltering:
         )
 
         # Filter by owner
-        response = async_authenticated_client.get(
-            f"/recipes?owner_id={async_test_user.id}"
-        )
+        response = async_authenticated_client.get(f"/recipes?owner_id={async_test_user.id}")
 
         assert response.status_code == 200
         recipes = response.json()
         assert all(r["owner_id"] == str(async_test_user.id) for r in recipes)
+
+
+class TestRecipeIndex:
+    """Test recipe index endpoint for book-style discovery."""
+
+    def test_index_with_indexed_ingredients(self, async_authenticated_client: TestClient):
+        """Test index groups recipes by indexed ingredients."""
+        # Create recipes with indexed ingredients
+        chicken_recipe = {
+            "name": "Chicken Burritos",
+            "recipe_type": "dinner",
+            "ingredients": [
+                {
+                    "ingredient_name": "chicken",
+                    "quantity": 2,
+                    "unit": "pound",
+                    "order": 0,
+                    "is_indexed": True,
+                },
+                {
+                    "ingredient_name": "tortillas",
+                    "quantity": 8,
+                    "unit": "count",
+                    "order": 1,
+                    "is_indexed": False,
+                },
+            ],
+            "instructions": [{"step_number": 1, "description": "Cook chicken"}],
+        }
+
+        chicken_soup_recipe = {
+            "name": "Chicken Soup",
+            "recipe_type": "dinner",
+            "ingredients": [
+                {
+                    "ingredient_name": "chicken",
+                    "quantity": 1,
+                    "unit": "whole",
+                    "order": 0,
+                    "is_indexed": True,
+                },
+                {
+                    "ingredient_name": "carrots",
+                    "quantity": 3,
+                    "unit": "count",
+                    "order": 1,
+                    "is_indexed": True,
+                },
+            ],
+            "instructions": [{"step_number": 1, "description": "Simmer"}],
+        }
+
+        # Create recipes
+        response1 = async_authenticated_client.post("/recipes", json=chicken_recipe)
+        assert response1.status_code == 201
+
+        response2 = async_authenticated_client.post("/recipes", json=chicken_soup_recipe)
+        assert response2.status_code == 201
+
+        # Get index
+        response = async_authenticated_client.get("/recipes/index")
+        assert response.status_code == 200
+
+        index = response.json()["index"]
+
+        # Check structure
+        assert "C" in index  # Chicken and Carrots
+
+        # Find chicken entry
+        c_entries = index["C"]
+        chicken_entry = next(
+            (e for e in c_entries if e["type"] == "ingredient" and e["name"] == "chicken"), None
+        )
+        assert chicken_entry is not None
+        assert len(chicken_entry["recipes"]) == 2
+        recipe_names = [r["name"] for r in chicken_entry["recipes"]]
+        assert "Chicken Burritos" in recipe_names
+        assert "Chicken Soup" in recipe_names
+
+        # Find carrots entry
+        carrots_entry = next(
+            (e for e in c_entries if e["type"] == "ingredient" and e["name"] == "carrots"), None
+        )
+        assert carrots_entry is not None
+        assert len(carrots_entry["recipes"]) == 1
+        assert carrots_entry["recipes"][0]["name"] == "Chicken Soup"
+
+    def test_index_with_standalone_recipes(self, async_authenticated_client: TestClient):
+        """Test index includes standalone recipes without indexed ingredients."""
+        recipe = {
+            "name": "Apple Pie",
+            "recipe_type": "dessert",
+            "ingredients": [
+                {
+                    "ingredient_name": "apples",
+                    "quantity": 6,
+                    "unit": "count",
+                    "order": 0,
+                    "is_indexed": False,
+                },
+                {
+                    "ingredient_name": "sugar",
+                    "quantity": 1,
+                    "unit": "cup",
+                    "order": 1,
+                    "is_indexed": False,
+                },
+            ],
+            "instructions": [{"step_number": 1, "description": "Bake"}],
+        }
+
+        response1 = async_authenticated_client.post("/recipes", json=recipe)
+        assert response1.status_code == 201
+
+        # Get index
+        response = async_authenticated_client.get("/recipes/index")
+        assert response.status_code == 200
+
+        index = response.json()["index"]
+
+        # Check structure
+        assert "A" in index
+
+        # Find Apple Pie as standalone recipe
+        a_entries = index["A"]
+        apple_pie_entry = next(
+            (e for e in a_entries if e["type"] == "recipe" and e["name"] == "Apple Pie"), None
+        )
+        assert apple_pie_entry is not None
+        assert apple_pie_entry["indexed_ingredients"] == []
+
+    def test_index_alphabetical_sorting(self, async_authenticated_client: TestClient):
+        """Test index entries are sorted alphabetically."""
+        recipes = [
+            {
+                "name": "Zebra Cake",
+                "ingredients": [
+                    {
+                        "ingredient_name": "sugar",
+                        "quantity": 1,
+                        "unit": "cup",
+                        "order": 0,
+                        "is_indexed": False,
+                    }
+                ],
+                "instructions": [{"step_number": 1, "description": "Mix"}],
+            },
+            {
+                "name": "Apple Crisp",
+                "ingredients": [
+                    {
+                        "ingredient_name": "apples",
+                        "quantity": 4,
+                        "unit": "count",
+                        "order": 0,
+                        "is_indexed": False,
+                    }
+                ],
+                "instructions": [{"step_number": 1, "description": "Bake"}],
+            },
+            {
+                "name": "Muffins",
+                "ingredients": [
+                    {
+                        "ingredient_name": "flour",
+                        "quantity": 2,
+                        "unit": "cup",
+                        "order": 0,
+                        "is_indexed": False,
+                    }
+                ],
+                "instructions": [{"step_number": 1, "description": "Mix"}],
+            },
+        ]
+
+        for recipe in recipes:
+            response = async_authenticated_client.post("/recipes", json=recipe)
+            assert response.status_code == 201
+
+        # Get index
+        response = async_authenticated_client.get("/recipes/index")
+        assert response.status_code == 200
+
+        index = response.json()["index"]
+
+        # Check alphabetical order within each letter section
+        for letter, entries in index.items():
+            names = [e["name"] for e in entries]
+            assert names == sorted(names, key=str.lower)
+
+    def test_index_retired_filtering(self, async_authenticated_client: TestClient):
+        """Test index excludes retired recipes by default."""
+        recipe = {
+            "name": "Old Recipe",
+            "ingredients": [
+                {
+                    "ingredient_name": "stuff",
+                    "quantity": 1,
+                    "unit": "cup",
+                    "order": 0,
+                    "is_indexed": True,
+                }
+            ],
+            "instructions": [{"step_number": 1, "description": "Cook"}],
+        }
+
+        response1 = async_authenticated_client.post("/recipes", json=recipe)
+        assert response1.status_code == 201
+        recipe_id = response1.json()["id"]
+
+        # Retire the recipe
+        response2 = async_authenticated_client.delete(f"/recipes/{recipe_id}")
+        assert response2.status_code == 200
+
+        # Get index without retired
+        response3 = async_authenticated_client.get("/recipes/index")
+        assert response3.status_code == 200
+        index = response3.json()["index"]
+
+        # Should not have 'O' or 'S' entries
+        assert "O" not in index
+        assert "S" not in index
+
+        # Get index with retired
+        response4 = async_authenticated_client.get("/recipes/index?include_retired=true")
+        assert response4.status_code == 200
+        index_with_retired = response4.json()["index"]
+
+        # Should have 'S' entry for "stuff" ingredient
+        assert "S" in index_with_retired
+
+    def test_index_empty(self, async_authenticated_client: TestClient):
+        """Test index returns empty dict when no recipes exist."""
+        response = async_authenticated_client.get("/recipes/index")
+        assert response.status_code == 200
+
+        index = response.json()["index"]
+        assert index == {}
+
+    def test_index_common_ingredient_normalization(self, async_authenticated_client: TestClient):
+        """Test index uses common_ingredient for grouping when available."""
+        # This test requires common_ingredients to be set up
+        # For now, we'll just test that raw ingredient names work as fallback
+        recipe = {
+            "name": "Beef Stew",
+            "ingredients": [
+                {
+                    "ingredient_name": "beef chuck",
+                    "quantity": 2,
+                    "unit": "pound",
+                    "order": 0,
+                    "is_indexed": True,
+                },
+            ],
+            "instructions": [{"step_number": 1, "description": "Brown beef"}],
+        }
+
+        response1 = async_authenticated_client.post("/recipes", json=recipe)
+        assert response1.status_code == 201
+
+        response2 = async_authenticated_client.get("/recipes/index")
+        assert response2.status_code == 200
+
+        index = response2.json()["index"]
+
+        # Should have 'B' entry
+        assert "B" in index
+        b_entries = index["B"]
+
+        # Should find "beef chuck" as ingredient (fallback to raw name)
+        beef_entry = next(
+            (e for e in b_entries if e["type"] == "ingredient" and "beef" in e["name"].lower()),
+            None,
+        )
+        assert beef_entry is not None

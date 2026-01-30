@@ -34,6 +34,7 @@ from app.schemas.recipe import (
     RecipePrepStepUpdate,
     RecipeImportRequest,
     RecipeImportPreviewResponse,
+    RecipeIndexResponse,
 )
 
 router = APIRouter(prefix="/recipes", tags=["recipes"])
@@ -71,6 +72,34 @@ async def list_recipes(
         recipe_type=recipe_type,
     )
     return recipes
+
+
+@router.get("/index", response_model=RecipeIndexResponse)
+async def get_recipe_index(
+    include_retired: bool = Query(False, description="Include retired recipes"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get unified alphabetical recipe index mixing recipes and ingredients.
+
+    Returns a book-style index where:
+    - Ingredients are listed with their associated recipes
+    - Standalone recipes (without indexed ingredients) are listed directly
+    - Everything is organized alphabetically by first letter (A-Z, #)
+
+    Args:
+        include_retired: Include soft-deleted recipes in index
+        db: Database session (injected)
+        current_user: Authenticated user (injected)
+
+    Returns:
+        RecipeIndexResponse with index organized by letter
+    """
+    index = await RecipeService.get_recipe_index(
+        db=db,
+        include_retired=include_retired,
+    )
+    return {"index": index}
 
 
 @router.post("/import-preview", response_model=RecipeImportPreviewResponse)

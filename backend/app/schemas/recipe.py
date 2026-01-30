@@ -21,6 +21,7 @@ class RecipeIngredientBase(BaseModel):
     prep_note: Optional[str] = None  # Deprecated - use prep_step_id instead
     prep_step_id: Optional[UUID] = None  # Link to existing prep step
     prep_step_description: Optional[str] = None  # Create new prep step with this description
+    is_indexed: bool = False  # Whether this ingredient should appear in the recipe index
 
     @field_validator("unit", mode="before")
     @classmethod
@@ -226,6 +227,7 @@ class RecipeBase(BaseModel):
     """Base schema for recipes."""
 
     name: str = Field(..., min_length=1)
+    index_name: Optional[str] = None  # Alternative name for alphabetical sorting
     recipe_type: Optional[str] = None
     description: Optional[str] = None
     prep_time_minutes: Optional[int] = Field(None, ge=0)
@@ -247,6 +249,7 @@ class RecipeUpdate(BaseModel):
     """Schema for updating a recipe."""
 
     name: Optional[str] = Field(None, min_length=1)
+    index_name: Optional[str] = None  # Alternative name for alphabetical sorting
     recipe_type: Optional[str] = None
     description: Optional[str] = None
     prep_time_minutes: Optional[int] = Field(None, ge=0)
@@ -372,3 +375,33 @@ class RecipeImportPreviewResponse(BaseModel):
     source_url: str
     ingredients: List[RecipeImportPreviewIngredient]
     instructions: List[RecipeImportPreviewInstruction]
+
+
+# ============================================================================
+# Recipe Index Schemas
+# ============================================================================
+
+
+class RecipeIndexRecipeRef(BaseModel):
+    """Minimal recipe reference for index entries."""
+
+    id: UUID
+    name: str
+
+
+class RecipeIndexEntry(BaseModel):
+    """Entry in the recipe index (either an ingredient or a recipe)."""
+
+    type: str  # "ingredient" or "recipe"
+    name: str
+    # For type="recipe":
+    id: Optional[UUID] = None
+    indexed_ingredients: Optional[List[str]] = None
+    # For type="ingredient":
+    recipes: Optional[List[RecipeIndexRecipeRef]] = None
+
+
+class RecipeIndexResponse(BaseModel):
+    """Response schema for the recipe index endpoint."""
+
+    index: dict[str, List[RecipeIndexEntry]]  # {"A": [...], "B": [...], ...}

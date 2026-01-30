@@ -143,6 +143,7 @@ class RecipeService:
         recipe = Recipe(
             owner_id=owner_id,
             name=recipe_data.name,
+            index_name=recipe_data.index_name,
             recipe_type=recipe_data.recipe_type,
             description=recipe_data.description,
             prep_time_minutes=recipe_data.prep_time_minutes,
@@ -244,6 +245,8 @@ class RecipeService:
         # Update fields
         if recipe_data.name is not None:
             recipe.name = recipe_data.name
+        if hasattr(recipe_data, "index_name") and recipe_data.index_name is not None:
+            recipe.index_name = recipe_data.index_name
         if recipe_data.recipe_type is not None:
             recipe.recipe_type = recipe_data.recipe_type
         if recipe_data.prep_time_minutes is not None:
@@ -533,6 +536,7 @@ class RecipeService:
             order=ingredient_data.order,
             common_ingredient_id=common_ingredient_id,  # Auto-matched or None
             prep_note=ingredient_data.prep_note,
+            is_indexed=ingredient_data.is_indexed,
         )
 
         db.add(ingredient)
@@ -629,6 +633,8 @@ class RecipeService:
             ingredient.order = ingredient_data.order
         if ingredient_data.prep_note is not None:
             ingredient.prep_note = ingredient_data.prep_note
+        if hasattr(ingredient_data, "is_indexed") and ingredient_data.is_indexed is not None:
+            ingredient.is_indexed = ingredient_data.is_indexed
 
         # Handle prep step linking/unlinking
         if hasattr(ingredient_data, "prep_step_id"):
@@ -1178,3 +1184,103 @@ class RecipeService:
         # Reload with relationships
         recipe = await RecipeService.get_recipe_by_id(db=db, recipe_id=recipe.id)
         return recipe
+
+    # ========================================================================
+    # Recipe Index
+    # ========================================================================
+
+    @staticmethod
+    async def get_recipe_index(
+        db: AsyncSession,
+        include_retired: bool = False,
+    ) -> dict[str, list[dict]]:
+        """
+        Build unified recipe index mixing recipes and ingredients alphabetically.
+
+        Returns a dictionary organized by first letter (A-Z) with entries for:
+        - Ingredients (with their associated recipes)
+        - Standalone recipes (those not appearing under any ingredient)
+
+        Args:
+            db: Database session
+            include_retired: Whether to include retired recipes
+
+        Returns:
+            Dictionary with letter keys (A-Z) and lists of index entries
+        """
+        from collections import defaultdict
+
+        # Query all recipes with indexed ingredients
+        query = select(Recipe).options(
+            selectinload(Recipe.ingredients).selectinload(RecipeIngredient.common_ingredient)
+        )
+
+        if not include_retired:
+            query = query.where(Recipe.retired_at.is_(None))
+
+        result = await db.execute(query)
+        recipes = result.scalars().all()
+
+        # Build two structures:
+        # 1. Recipes grouped by ingredient
+        ingredient_to_recipes = defaultdict(list)
+        # 2. Track which recipes have indexed ingredients
+        recipes_with_indexed_ingredients = set()
+
+        for recipe in recipes:
+            for ingredient in recipe.ingredients:
+                if ingredient.is_indexed:
+                    recipes_with_indexed_ingredients.add(recipe.id)
+
+                    # Use common_ingredient.name if available, otherwise raw ingredient_name
+                    ingredient_key = (
+                        ingredient.common_ingredient.name
+                        if ingredient.common_ingredient
+                        else ingredient.ingredient_name
+                    )
+
+                    ingredient_to_recipes[ingredient_key].append(
+                        {
+                            "id": str(recipe.id),
+                            "name": recipe.name,
+                        }
+                    )
+
+        # Build the unified index
+        all_entries = []
+
+        # Add ingredient entries
+        for ingredient_name, recipe_refs in ingredient_to_recipes.items():
+            all_entries.append(
+                {
+                    "type": "ingredient",
+                    "name": ingredient_name,
+                    "recipes": recipe_refs,
+                }
+            )
+
+        # Add standalone recipe entries (those without indexed ingredients)
+        for recipe in recipes:
+            if recipe.id not in recipes_with_indexed_ingredients:
+                all_entries.append(
+                    {
+                        "type": "recipe",
+                        "name": recipe.name,
+                        "id": str(recipe.id),
+                        "indexed_ingredients": [],
+                    }
+                )
+
+        # Sort all entries alphabetically by name
+        all_entries.sort(key=lambda x: x["name"].lower())
+
+        # Group by first letter
+        index_by_letter = defaultdict(list)
+        for entry in all_entries:
+            first_letter = entry["name"][0].upper()
+            # Only include A-Z, put numbers/symbols under '#'
+            if not first_letter.isalpha():
+                first_letter = "#"
+            index_by_letter[first_letter].append(entry)
+
+        return dict(index_by_letter)
