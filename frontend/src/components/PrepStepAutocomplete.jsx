@@ -190,6 +190,17 @@ const PrepStepAutocomplete = ({
     <div className="relative">
       <div className="relative flex gap-2">
         <div className="relative flex-1">
+          {/* Link icon indicator when linked */}
+          {isLinked && (
+            <span
+              className={`absolute left-2 top-1/2 -translate-y-1/2 text-sm ${
+                isDark ? 'text-gruvbox-dark-aqua' : 'text-gruvbox-light-aqua'
+              }`}
+              title="Linked to prep step"
+            >
+              🔗
+            </span>
+          )}
           <input
             ref={inputRef}
             type="text"
@@ -200,9 +211,13 @@ const PrepStepAutocomplete = ({
             onKeyDown={handleKeyDown}
             required={required}
             placeholder="Prep step (optional)..."
-            className={`w-full p-2 rounded border ${
+            className={`w-full p-2 rounded border ${isLinked ? 'pl-7' : ''} ${
               isDark
-                ? 'bg-gruvbox-dark-bg border-gruvbox-dark-gray text-gruvbox-dark-fg focus:border-gruvbox-dark-orange-bright'
+                ? isLinked
+                  ? 'bg-gruvbox-dark-bg border-gruvbox-dark-aqua text-gruvbox-dark-fg focus:border-gruvbox-dark-aqua-bright'
+                  : 'bg-gruvbox-dark-bg border-gruvbox-dark-gray text-gruvbox-dark-fg focus:border-gruvbox-dark-orange-bright'
+                : isLinked
+                ? 'bg-gruvbox-light-bg border-gruvbox-light-aqua text-gruvbox-light-fg focus:border-gruvbox-light-aqua-bright'
                 : 'bg-gruvbox-light-bg border-gruvbox-light-gray text-gruvbox-light-fg focus:border-gruvbox-light-orange-bright'
             } focus:outline-none`}
           />

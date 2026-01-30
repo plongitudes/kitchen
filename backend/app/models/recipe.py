@@ -7,6 +7,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Enum as SQLEnum,
+    Boolean,
     Index,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -67,6 +68,7 @@ class Recipe(Base):
         index=True,
     )
     name = Column(String, nullable=False)
+    index_name = Column(String, nullable=True)  # Alternative name for alphabetical sorting
     recipe_type = Column(String, nullable=True)  # e.g., breakfast, dinner, dessert
     description = Column(Text, nullable=True)  # Recipe description/summary
     prep_time_minutes = Column(Integer, nullable=True)
@@ -130,6 +132,7 @@ class RecipeIngredient(Base):
         index=True,
     )
     prep_note = Column(Text, nullable=True)
+    is_indexed = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships
@@ -227,7 +230,7 @@ class PrepStepIngredient(Base):
 
     # Relationships
     prep_step = relationship("RecipePrepStep", back_populates="ingredient_links")
-    ingredient = relationship("RecipeIngredient")
+    ingredient = relationship("RecipeIngredient", overlaps="prep_step_links")
 
     def __repr__(self):
         return f"<PrepStepIngredient {self.prep_step_id} -> {self.recipe_ingredient_id}>"

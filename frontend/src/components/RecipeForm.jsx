@@ -17,10 +17,10 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
   const [prepStepsForAutocomplete, setPrepStepsForAutocomplete] = useState([]);
   const ingredientRefs = useRef([]);
   const instructionRefs = useRef([]);
-  const prepStepCreationInProgress = useRef(new Set()); // Track in-flight prep step creations
 
   const [formData, setFormData] = useState({
     name: '',
+    index_name: '',
     recipe_type: '',
     description: '',
     prep_time_minutes: '',
@@ -45,26 +45,37 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
       // Populate prep_step_description on ingredients from linked prep steps
       const ingredientsWithPrepSteps = (initialData.ingredients || []).map(ing => {
         let prep_step_description = '';
-        
+        let linked_prep_step_id = null;
+
         // If ingredient is linked to a prep step, use that description
         if (ing.linked_prep_step_ids && ing.linked_prep_step_ids.length > 0) {
           const prepStepId = ing.linked_prep_step_ids[0]; // Take first one
           const prepStep = prepStepsById[prepStepId];
           if (prepStep) {
             prep_step_description = prepStep.description;
+            linked_prep_step_id = prepStepId;
           }
         }
-        
+
         // Spread ingredient but ensure prep_step_description is never null/undefined
-        const { prep_step_description: _, ...restOfIng } = ing;
+        const { prep_step_description: _, linked_prep_step_ids: __, ...restOfIng } = ing;
         return {
           ...restOfIng,
           prep_step_description,
+          linked_prep_step_id,
         };
       });
 
+      // Initialize prep steps for autocomplete from initialData
+      const initialPrepSteps = (initialData.prep_steps || []).map(ps => ({
+        id: ps.id,
+        description: ps.description,
+      }));
+      setPrepStepsForAutocomplete(initialPrepSteps);
+
       setFormData({
         name: initialData.name || '',
+        index_name: initialData.index_name || '',
         recipe_type: initialData.recipe_type || '',
         description: initialData.description || '',
         prep_time_minutes: initialData.prep_time_minutes || '',
@@ -77,41 +88,6 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
       });
     }
   }, [initialData]);
-
-  // Fetch prep steps for autocomplete when editing a recipe
-  useEffect(() => {
-    const fetchPrepSteps = async () => {
-      if (!recipeId) {
-        setPrepStepsForAutocomplete([]);
-        return;
-      }
-
-      try {
-        const response = await recipeAPI.getPrepSteps(recipeId);
-        // Transform backend response to autocomplete format
-        // Backend provides: { id, description, ingredient_ids }
-        // We need: { id, description, linked_ingredient_names }
-        const transformedSteps = response.data.map(step => {
-          // Match ingredient_ids to ingredient names from formData
-          const linkedNames = formData.ingredients
-            .filter(ing => ing.id && step.ingredient_ids.includes(ing.id))
-            .map(ing => ing.ingredient_name);
-          
-          return {
-            id: step.id,
-            description: step.description,
-            linked_ingredient_names: linkedNames,
-          };
-        });
-        setPrepStepsForAutocomplete(transformedSteps);
-      } catch (err) {
-        console.error('Failed to fetch prep steps:', err);
-        setPrepStepsForAutocomplete([]);
-      }
-    };
-
-    fetchPrepSteps();
-  }, [recipeId, formData.ingredients]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -131,6 +107,7 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
     try {
       const payload = {
         name: formData.name,
+        index_name: formData.index_name || null,
         recipe_type: formData.recipe_type || null,
         description: formData.description || null,
         prep_time_minutes: formData.prep_time_minutes ? parseInt(formData.prep_time_minutes) : null,
@@ -144,6 +121,7 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
           unit: ing.unit || null,
           order: ing.order,
           prep_step_description: ing.prep_step_description || null,
+          is_indexed: ing.is_indexed || false,
         })),
         instructions: formData.instructions.map(inst => ({
           step_number: inst.step_number,
@@ -228,6 +206,8 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
           unit: '',
           order: newIndex,
           prep_step_description: '',
+          linked_prep_step_id: null,
+          is_indexed: false,
         },
       ],
     });
@@ -254,58 +234,78 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
     setFormData({ ...formData, ingredients: updated });
   };
 
-  const handlePrepStepBlur = async (prepStepText) => {
-    // Only create prep steps for existing recipes (edit mode)
-    if (!recipeId || !prepStepText || !prepStepText.trim()) {
-      return;
-    }
-
-    const trimmedText = prepStepText.trim().toLowerCase();
-
-    // Check if this prep step already exists
-    const exists = prepStepsForAutocomplete.some(
-      ps => ps.description.toLowerCase() === trimmedText
+  // Build autocomplete suggestions from persisted prep steps + current form state
+  const allPrepStepSuggestions = (() => {
+    // Start with persisted prep steps
+    const suggestions = [...prepStepsForAutocomplete];
+    const existingDescriptions = new Set(
+      suggestions.map(ps => ps.description.toLowerCase())
     );
 
-    if (exists) {
-      return; // Already exists, no need to create
+    // Add unique prep step descriptions from current form (not yet saved)
+    formData.ingredients.forEach(ing => {
+      const desc = (ing.prep_step_description || '').trim();
+      if (desc && !existingDescriptions.has(desc.toLowerCase())) {
+        existingDescriptions.add(desc.toLowerCase());
+        suggestions.push({
+          id: null, // Not persisted yet
+          description: desc,
+        });
+      }
+    });
+
+    return suggestions;
+  })();
+
+  // Check if an ingredient is linked to a prep step (and text still matches)
+  const isIngredientLinked = (ing) => {
+    if (!ing.linked_prep_step_id) return false;
+    const linkedStep = allPrepStepSuggestions.find(ps => ps.id === ing.linked_prep_step_id);
+    if (!linkedStep) return false;
+    // Only considered linked if the description still matches
+    return linkedStep.description.toLowerCase() === (ing.prep_step_description || '').toLowerCase();
+  };
+
+  // Check if the Accept button should be shown
+  // Show when: text matches an existing (persisted) prep step but ingredient isn't linked to it
+  const shouldShowAcceptButton = (ing) => {
+    if (!ing.prep_step_description || !ing.prep_step_description.trim()) return false;
+    // Only show Accept for persisted prep steps (with an id)
+    const matchingStep = allPrepStepSuggestions.find(
+      ps => ps.id && ps.description.toLowerCase() === ing.prep_step_description.toLowerCase()
+    );
+    // Show Accept if there's a matching step and we're not already linked to it
+    return matchingStep && matchingStep.id !== ing.linked_prep_step_id;
+  };
+
+  // Handle Accept: link ingredient to the prep step matching its description
+  const handleAcceptPrepStep = (index) => {
+    const ing = formData.ingredients[index];
+    if (!ing.prep_step_description) return;
+
+    const matchingStep = allPrepStepSuggestions.find(
+      ps => ps.id && ps.description.toLowerCase() === ing.prep_step_description.toLowerCase()
+    );
+
+    if (matchingStep) {
+      const updated = [...formData.ingredients];
+      updated[index] = {
+        ...updated[index],
+        linked_prep_step_id: matchingStep.id,
+        prep_step_description: matchingStep.description, // Normalize to exact match
+      };
+      setFormData({ ...formData, ingredients: updated });
     }
+  };
 
-    // Check if we're already creating this prep step (prevent race condition)
-    if (prepStepCreationInProgress.current.has(trimmedText)) {
-      return;
-    }
-
-    // Mark this prep step as being created
-    prepStepCreationInProgress.current.add(trimmedText);
-
-    try {
-      // Create the prep step on the backend
-      const response = await recipeAPI.createPrepStep(recipeId, {
-        description: prepStepText.trim(),
-        order: prepStepsForAutocomplete.length,
-      });
-
-      // Add to autocomplete list immediately
-      setPrepStepsForAutocomplete(prev => [
-        ...prev,
-        {
-          id: response.data.id,
-          description: response.data.description,
-          linked_ingredient_names: [],
-        },
-      ]);
-    } catch (err) {
-      console.error('Failed to create prep step on-the-fly:', err);
-      // Show error to user since this is a background operation that failed
-      setToast({
-        message: `Could not create prep step "${prepStepText.trim()}". You can still save the recipe.`,
-        type: 'error',
-      });
-    } finally {
-      // Always remove from in-progress set
-      prepStepCreationInProgress.current.delete(trimmedText);
-    }
+  // Handle Unlink: break the link but keep the text
+  const handleUnlinkPrepStep = (index) => {
+    const updated = [...formData.ingredients];
+    updated[index] = {
+      ...updated[index],
+      linked_prep_step_id: null,
+    };
+    setFormData({ ...formData, ingredients: updated });
   };
 
   const addInstruction = () => {
@@ -521,6 +521,22 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
         </div>
 
         <div className="mb-4">
+          <label className="block mb-2">
+            Index Name{' '}
+            <span className="text-sm text-gruvbox-dark-gray">
+              (Optional - for alphabetization, e.g., "Burritos, Chicken" instead of "Chicken Burritos")
+            </span>
+          </label>
+          <input
+            type="text"
+            value={formData.index_name}
+            onChange={(e) => setFormData({ ...formData, index_name: e.target.value })}
+            className="w-full p-2 rounded bg-gruvbox-dark-bg border border-gruvbox-dark-gray text-gruvbox-dark-fg focus:outline-none focus:border-gruvbox-dark-orange-bright"
+            placeholder="Leave blank to use recipe name"
+          />
+        </div>
+
+        <div className="mb-4">
           <label className="block mb-2">Description</label>
           <textarea
             value={formData.description}
@@ -644,10 +660,29 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
                 <PrepStepAutocomplete
                   value={ing.prep_step_description ?? ''}
                   onChange={(value) => updateIngredient(index, 'prep_step_description', value)}
-                  onBlur={() => handlePrepStepBlur(ing.prep_step_description)}
-                  prepSteps={prepStepsForAutocomplete}
+                  prepSteps={allPrepStepSuggestions.map(ps => ({
+                    ...ps,
+                    linked_ingredient_names: ps.id
+                      ? formData.ingredients
+                          .filter(i => i.linked_prep_step_id === ps.id)
+                          .map(i => i.ingredient_name)
+                      : [],
+                  }))}
                   required={false}
+                  isLinked={isIngredientLinked(ing)}
+                  showAcceptButton={shouldShowAcceptButton(ing)}
+                  onAccept={() => handleAcceptPrepStep(index)}
+                  onUnlink={() => handleUnlinkPrepStep(index)}
                 />
+                <label className="flex items-center gap-2 text-sm text-gruvbox-dark-gray mt-1">
+                  <input
+                    type="checkbox"
+                    checked={ing.is_indexed || false}
+                    onChange={(e) => updateIngredient(index, 'is_indexed', e.target.checked)}
+                    className="rounded"
+                  />
+                  <span>Index this ingredient (makes it findable in recipe index)</span>
+                </label>
               </div>
             ))}
           </div>
