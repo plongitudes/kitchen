@@ -308,6 +308,53 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
     setFormData({ ...formData, ingredients: updated });
   };
 
+  // Check if the Cancel button should be shown
+  // Show when: ingredient has a linked_prep_step_id but text has diverged from the linked step
+  const shouldShowCancelButton = (ing) => {
+    if (!ing.linked_prep_step_id) return false;
+    const linkedStep = allPrepStepSuggestions.find(ps => ps.id === ing.linked_prep_step_id);
+    if (!linkedStep) return false;
+    return linkedStep.description.toLowerCase() !== (ing.prep_step_description || '').toLowerCase();
+  };
+
+  // Handle Cancel: revert prep step text to the original linked step description
+  const handleCancelPrepStepChange = (index) => {
+    const ing = formData.ingredients[index];
+    if (!ing.linked_prep_step_id) return;
+    const linkedStep = allPrepStepSuggestions.find(ps => ps.id === ing.linked_prep_step_id);
+    if (!linkedStep) return;
+    const updated = [...formData.ingredients];
+    updated[index] = {
+      ...updated[index],
+      prep_step_description: linkedStep.description,
+    };
+    setFormData({ ...formData, ingredients: updated });
+  };
+
+  // Handle Edit: rename a linked prep step, propagating to all ingredients sharing it
+  const handleEditPrepStep = (ingredientIndex, newDescription) => {
+    const ing = formData.ingredients[ingredientIndex];
+    const prepStepId = ing.linked_prep_step_id;
+    if (!prepStepId) return;
+
+    // Update the prep step in the autocomplete list
+    setPrepStepsForAutocomplete(prev =>
+      prev.map(ps =>
+        ps.id === prepStepId ? { ...ps, description: newDescription } : ps
+      )
+    );
+
+    // Update all ingredients linked to this prep step
+    const updatedIngredients = formData.ingredients.map(i => {
+      if (i.linked_prep_step_id === prepStepId) {
+        return { ...i, prep_step_description: newDescription };
+      }
+      return i;
+    });
+
+    setFormData({ ...formData, ingredients: updatedIngredients });
+  };
+
   const addInstruction = () => {
     const newIndex = formData.instructions.length;
     setFormData({
@@ -673,6 +720,9 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
                   showAcceptButton={shouldShowAcceptButton(ing)}
                   onAccept={() => handleAcceptPrepStep(index)}
                   onUnlink={() => handleUnlinkPrepStep(index)}
+                  onEditConfirm={(newDesc) => handleEditPrepStep(index, newDesc)}
+                  showCancelButton={shouldShowCancelButton(ing)}
+                  onCancel={() => handleCancelPrepStepChange(index)}
                 />
                 <label className="flex items-center gap-2 text-sm text-gruvbox-dark-gray mt-1">
                   <input

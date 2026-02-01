@@ -4,34 +4,41 @@ import { useTheme } from '../context/ThemeContext';
 
 /**
  * Autocomplete component for recipe prep step selection and linking.
- * 
+ *
  * Features:
  * - Fuzzy search with fuse.js (searches both description and linked ingredients)
  * - Displays prep steps in format: "description (ingredient1, ingredient2)"
  * - Keyboard navigation (arrow keys, enter, escape)
  * - Accept button: Update all ingredients linked to this prep step
  * - Unlink button: Break the link between this ingredient and prep step
+ * - Edit button: Rename a linked prep step (propagates to all linked ingredients)
  * - Free-form text entry for new prep steps
  * - Theme-aware styling
  */
-const PrepStepAutocomplete = ({ 
-  value, 
-  onChange, 
+const PrepStepAutocomplete = ({
+  value,
+  onChange,
   onBlur,
   prepSteps = [],
   onAccept,
   onUnlink,
+  onEditConfirm,
+  onCancel,
   isLinked = false,
   showAcceptButton = false,
-  required 
+  showCancelButton = false,
+  required
 }) => {
   const { isDark } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value ?? '');
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [filteredSteps, setFilteredSteps] = useState([]);
   const inputRef = useRef(null);
   const dropdownRef = useRef(null);
+  const originalValueRef = useRef('');
+  const isEditingRef = useRef(false);
 
   // Initialize fuse.js for fuzzy search
   const fuse = useRef(null);
@@ -57,8 +64,8 @@ const PrepStepAutocomplete = ({
 
   // Update filtered steps when search term changes
   useEffect(() => {
-    if (!searchTerm.trim()) {
-      // No search term - show all steps
+    if (!searchTerm.trim() || (isLinked && !isEditing)) {
+      // No search term, or linked (readOnly) - show all steps
       setFilteredSteps(prepSteps);
       setHighlightedIndex(-1);
     } else {
@@ -69,7 +76,7 @@ const PrepStepAutocomplete = ({
       // Auto-highlight first result for quick Enter selection
       setHighlightedIndex(filtered.length > 0 ? 0 : -1);
     }
-  }, [searchTerm, prepSteps]);
+  }, [searchTerm, prepSteps, isLinked, isEditing]);
 
   // Handle click outside to close dropdown
   useEffect(() => {
@@ -89,23 +96,66 @@ const PrepStepAutocomplete = ({
 
   // Set initial search term when value changes (from outside)
   useEffect(() => {
-    setSearchTerm(value ?? '');
+    if (!isEditingRef.current) {
+      setSearchTerm(value ?? '');
+    }
   }, [value]);
+
+  // --- Edit mode handlers ---
+
+  const handleEditClick = () => {
+    originalValueRef.current = searchTerm;
+    isEditingRef.current = true;
+    setIsEditing(true);
+    setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }, 0);
+  };
+
+  const handleEditConfirm = () => {
+    const trimmed = searchTerm.trim();
+    if (!trimmed) {
+      handleEditCancel();
+      return;
+    }
+    isEditingRef.current = false;
+    setIsEditing(false);
+    if (onEditConfirm) {
+      onEditConfirm(trimmed);
+    }
+  };
+
+  const handleEditCancel = () => {
+    const original = originalValueRef.current;
+    isEditingRef.current = false;
+    setIsEditing(false);
+    setSearchTerm(original);
+  };
+
+  // --- Input handlers ---
 
   const handleInputChange = (e) => {
     const newValue = e.target.value;
     setSearchTerm(newValue);
-    onChange(newValue);
-    setIsOpen(true);
+    if (!isEditing) {
+      onChange(newValue);
+      setIsOpen(true);
+    }
   };
 
   const handleInputFocus = () => {
-    setIsOpen(true);
+    if (!isEditing) {
+      setIsOpen(true);
+    }
   };
 
   const handleInputBlur = () => {
     // Delay to allow click on dropdown item or buttons
     setTimeout(() => {
+      if (isEditingRef.current) {
+        handleEditCancel();
+      }
       if (onBlur) {
         onBlur();
       }
@@ -127,6 +177,23 @@ const PrepStepAutocomplete = ({
   };
 
   const handleKeyDown = (e) => {
+    // Edit mode: only handle confirm/cancel keys
+    if (isEditing) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleEditConfirm();
+      } else if (e.key === 'Tab') {
+        // Don't prevent default - allow natural tab navigation
+        handleEditConfirm();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        handleEditCancel();
+        inputRef.current?.blur();
+      }
+      return;
+    }
+
+    // Normal mode: dropdown navigation
     if (!isOpen) {
       if (e.key === 'ArrowDown') {
         setIsOpen(true);
@@ -190,8 +257,8 @@ const PrepStepAutocomplete = ({
     <div className="relative">
       <div className="relative flex gap-2">
         <div className="relative flex-1">
-          {/* Link icon indicator when linked */}
-          {isLinked && (
+          {/* Link icon indicator when linked (hidden during edit) */}
+          {isLinked && !isEditing && (
             <span
               className={`absolute left-2 top-1/2 -translate-y-1/2 text-sm ${
                 isDark ? 'text-gruvbox-dark-aqua' : 'text-gruvbox-light-aqua'
@@ -210,21 +277,36 @@ const PrepStepAutocomplete = ({
             onBlur={handleInputBlur}
             onKeyDown={handleKeyDown}
             required={required}
+            readOnly={isLinked && !isEditing}
             placeholder="Prep step (optional)..."
-            className={`w-full p-2 rounded border ${isLinked ? 'pl-7' : ''} ${
+            className={`w-full p-2 rounded border ${isLinked && !isEditing ? 'pl-7' : ''} ${
               isDark
-                ? isLinked
-                  ? 'bg-gruvbox-dark-bg border-gruvbox-dark-aqua text-gruvbox-dark-fg focus:border-gruvbox-dark-aqua-bright'
-                  : 'bg-gruvbox-dark-bg border-gruvbox-dark-gray text-gruvbox-dark-fg focus:border-gruvbox-dark-orange-bright'
-                : isLinked
-                ? 'bg-gruvbox-light-bg border-gruvbox-light-aqua text-gruvbox-light-fg focus:border-gruvbox-light-aqua-bright'
-                : 'bg-gruvbox-light-bg border-gruvbox-light-gray text-gruvbox-light-fg focus:border-gruvbox-light-orange-bright'
+                ? isEditing
+                  ? 'bg-gruvbox-dark-bg border-gruvbox-dark-yellow text-gruvbox-dark-fg focus:border-gruvbox-dark-yellow-bright'
+                  : isLinked
+                    ? 'bg-gruvbox-dark-bg border-gruvbox-dark-aqua text-gruvbox-dark-fg focus:border-gruvbox-dark-aqua-bright'
+                    : 'bg-gruvbox-dark-bg border-gruvbox-dark-gray text-gruvbox-dark-fg focus:border-gruvbox-dark-orange-bright'
+                : isEditing
+                  ? 'bg-gruvbox-light-bg border-gruvbox-light-yellow text-gruvbox-light-fg focus:border-gruvbox-light-yellow-bright'
+                  : isLinked
+                  ? 'bg-gruvbox-light-bg border-gruvbox-light-aqua text-gruvbox-light-fg focus:border-gruvbox-light-aqua-bright'
+                  : 'bg-gruvbox-light-bg border-gruvbox-light-gray text-gruvbox-light-fg focus:border-gruvbox-light-orange-bright'
             } focus:outline-none`}
           />
-          {value && (
+          {/* Clear/Unlink button inside the field */}
+          {value && !isEditing && (
             <button
               type="button"
-              onClick={handleClear}
+              onClick={() => {
+                if (isLinked && onUnlink) {
+                  onUnlink();
+                  onChange('');
+                  setSearchTerm('');
+                  setIsOpen(false);
+                } else {
+                  handleClear();
+                }
+              }}
               className={`absolute right-2 top-1/2 -translate-y-1/2 ${
                 isDark ? 'text-gruvbox-dark-gray hover:text-gruvbox-dark-fg' : 'text-gruvbox-light-gray hover:text-gruvbox-light-fg'
               }`}
@@ -249,23 +331,40 @@ const PrepStepAutocomplete = ({
           </button>
         )}
 
-        {/* Unlink button - shown when ingredient is linked to a prep step */}
-        {isLinked && (
+        {/* Cancel button - revert to original linked prep step */}
+        {showCancelButton && (
           <button
             type="button"
-            onClick={onUnlink}
+            onClick={onCancel}
             className={`px-3 py-2 rounded text-sm font-medium ${
               isDark
-                ? 'bg-gruvbox-dark-red text-gruvbox-dark-bg hover:bg-gruvbox-dark-red-bright'
-                : 'bg-gruvbox-light-red text-gruvbox-light-bg hover:bg-gruvbox-light-red-bright'
+                ? 'bg-gruvbox-dark-gray text-gruvbox-dark-fg hover:bg-gruvbox-dark-gray-bright'
+                : 'bg-gruvbox-light-gray text-gruvbox-light-fg hover:bg-gruvbox-light-gray-bright'
             }`}
           >
-            Unlink
+            Cancel
           </button>
         )}
+
+        {/* Edit button - shown when linked and not currently editing */}
+        {isLinked && !isEditing && (
+          <button
+            type="button"
+            onClick={handleEditClick}
+            className={`px-3 py-2 rounded text-sm font-medium ${
+              isDark
+                ? 'bg-gruvbox-dark-blue text-gruvbox-dark-bg hover:bg-gruvbox-dark-blue-bright'
+                : 'bg-gruvbox-light-blue text-gruvbox-light-bg hover:bg-gruvbox-light-blue-bright'
+            }`}
+            title="Edit prep step"
+          >
+            📝
+          </button>
+        )}
+
       </div>
 
-      {isOpen && filteredSteps.length > 0 && (
+      {isOpen && !isEditing && filteredSteps.length > 0 && (
         <div
           ref={dropdownRef}
           className={`absolute z-10 w-full mt-1 max-h-60 overflow-y-auto rounded border shadow-lg ${

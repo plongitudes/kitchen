@@ -280,11 +280,11 @@ describe('PrepStepAutocomplete', () => {
       expect(screen.getByText(/accept/i)).toBeInTheDocument();
     });
 
-    it('shows Unlink button when isLinked is true', () => {
+    it('shows clear button inside field when isLinked with value', () => {
       renderWithProviders(
-        <PrepStepAutocomplete {...defaultProps} isLinked={true} />
+        <PrepStepAutocomplete {...defaultProps} isLinked={true} value="Dice finely" />
       );
-      expect(screen.getByText(/unlink/i)).toBeInTheDocument();
+      expect(screen.getByText('✕')).toBeInTheDocument();
     });
 
     it('calls onAccept when Accept button is clicked', async () => {
@@ -305,21 +305,25 @@ describe('PrepStepAutocomplete', () => {
       expect(onAccept).toHaveBeenCalled();
     });
 
-    it('calls onUnlink when Unlink button is clicked', async () => {
+    it('calls onUnlink when clear button is clicked on linked prep step', async () => {
       const user = userEvent.setup();
       const onUnlink = vi.fn();
+      const onChange = vi.fn();
       renderWithProviders(
-        <PrepStepAutocomplete 
-          {...defaultProps} 
-          isLinked={true} 
+        <PrepStepAutocomplete
+          {...defaultProps}
+          isLinked={true}
+          value="Dice finely"
           onUnlink={onUnlink}
+          onChange={onChange}
         />
       );
-      
-      const unlinkButton = screen.getByText(/unlink/i);
-      await user.click(unlinkButton);
-      
+
+      const clearButton = screen.getByText('✕');
+      await user.click(clearButton);
+
       expect(onUnlink).toHaveBeenCalled();
+      expect(onChange).toHaveBeenCalledWith('');
     });
   });
 
