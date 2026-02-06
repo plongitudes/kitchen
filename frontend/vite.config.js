@@ -16,6 +16,9 @@ const buildTimestamp = () => {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  server: {
+    allowedHosts: ['inverness.valley'],
+  },
   build: {
     rollupOptions: {
       output: {
