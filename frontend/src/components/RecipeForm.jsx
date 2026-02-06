@@ -670,26 +670,29 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
           <div className="space-y-3">
             {formData.ingredients.map((ing, index) => (
               <div key={index} className="group relative">
-                {/* Slide-out delete drawer - slides out from under card border on hover */}
-                {/* Position: right-full puts right edge at row's left; -mr-6 extends to card border */}
+                {/* Slide-out delete drawer - slides out from card border on hover */}
+                {/* Hidden by default (opacity-0), visible on hover (opacity-100) */}
                 <div
-                  className="absolute top-1 h-[68px] right-full -mr-6 flex items-center
-                    translate-x-full group-hover:-translate-x-6 hover:-translate-x-6
-                    max-md:-translate-x-6
-                    motion-reduce:transition-none motion-reduce:-translate-x-6
-                    transition-transform duration-150 ease-out"
+                  className="absolute top-1 h-[68px] -left-6 flex items-center
+                    -translate-x-full opacity-0
+                    group-hover:translate-x-0 group-hover:opacity-100
+                    hover:translate-x-0 hover:opacity-100
+                    max-md:translate-x-0 max-md:opacity-100
+                    motion-reduce:transition-none motion-reduce:translate-x-0 motion-reduce:opacity-100
+                    transition-all duration-150 ease-out"
                 >
-                  {/* 0-tab: dark drawer background that connects to card edge */}
-                  <div className="h-full w-8 bg-gruvbox-dark-bg-hard rounded-l" />
-                  {/* 1-tab-button: red delete button */}
-                  <button
-                    type="button"
-                    onClick={() => removeIngredient(index)}
-                    className="h-10 w-10 rounded-lg flex items-center justify-center
-                      bg-gruvbox-dark-red hover:bg-gruvbox-dark-red-bright text-gruvbox-dark-fg text-xl font-bold
-                      shadow-lg"
-                    title="Remove ingredient"
-                  >×</button>
+                  {/* Tab: same styling as card (bg + border), contains the button */}
+                  <div className="h-14 px-2 flex items-center justify-center
+                    bg-gruvbox-dark-bg-soft border border-gruvbox-dark-gray border-r-0 rounded-l-lg"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => removeIngredient(index)}
+                      className="h-10 w-10 rounded flex items-center justify-center
+                        bg-gruvbox-dark-red hover:bg-gruvbox-dark-red-bright text-gruvbox-dark-fg text-xl font-bold"
+                      title="Remove ingredient"
+                    >×</button>
+                  </div>
                 </div>
 
                 {/* Content wrapper - sits on top of delete drawer */}
