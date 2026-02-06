@@ -670,16 +670,17 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
           <div className="space-y-3">
             {formData.ingredients.map((ing, index) => (
               <div key={index} className="group relative">
-                {/* Slide-out delete drawer - slides out from card border on hover */}
-                {/* Hidden by default (opacity-0), visible on hover (opacity-100) */}
+                {/* Slide-out delete drawer - slides out from UNDER the card border on hover */}
+                {/* right-full: drawer is to the LEFT of the row */}
+                {/* translate-x-full: hidden state - pushed RIGHT (under the card) */}
+                {/* translate-x-0: visible state - at natural position (left of card) */}
                 <div
-                  className="absolute top-1 h-[68px] -left-6 flex items-center
-                    -translate-x-full opacity-0
-                    group-hover:translate-x-0 group-hover:opacity-100
-                    hover:translate-x-0 hover:opacity-100
-                    max-md:translate-x-0 max-md:opacity-100
-                    motion-reduce:transition-none motion-reduce:translate-x-0 motion-reduce:opacity-100
-                    transition-all duration-150 ease-out"
+                  className="absolute top-1 h-[68px] right-full flex items-center
+                    translate-x-full
+                    group-hover:translate-x-0 hover:translate-x-0
+                    max-md:translate-x-0
+                    motion-reduce:transition-none motion-reduce:translate-x-0
+                    transition-transform duration-150 ease-out"
                 >
                   {/* Tab: same styling as card (bg + border), contains the button */}
                   <div className="h-14 px-2 flex items-center justify-center
