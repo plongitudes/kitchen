@@ -145,9 +145,7 @@ describe('RecipeForm', () => {
       );
 
       // Should have 2 ingredients initially
-      const removeButtons = screen.getAllByText('×').filter(
-        btn => btn.closest('button')
-      );
+      const removeButtons = screen.getAllByTitle('Remove ingredient');
       // Remove the first ingredient (flour)
       await user.click(removeButtons[0]);
 

@@ -650,7 +650,7 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
       </div>
 
       {/* Ingredients */}
-      <div className="bg-gruvbox-dark-bg-soft p-6 rounded-lg border border-gruvbox-dark-gray mb-6">
+      <div className="bg-gruvbox-dark-bg-soft p-6 rounded-lg border border-gruvbox-dark-gray mb-6 relative z-0 overflow-visible">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gruvbox-dark-green-bright">
             Ingredients
@@ -669,7 +669,31 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
         ) : (
           <div className="space-y-3">
             {formData.ingredients.map((ing, index) => (
-              <div key={index} className="space-y-2">
+              <div key={index} className="group relative">
+                {/* Slide-out delete drawer - slides out from under card border on hover */}
+                {/* Position: right-full puts right edge at row's left; -mr-6 extends to card border */}
+                <div
+                  className="absolute top-1 h-[68px] right-full -mr-6 flex items-center
+                    translate-x-full group-hover:-translate-x-6 hover:-translate-x-6
+                    max-md:-translate-x-6
+                    motion-reduce:transition-none motion-reduce:-translate-x-6
+                    transition-transform duration-150 ease-out"
+                >
+                  {/* 0-tab: dark drawer background that connects to card edge */}
+                  <div className="h-full w-8 bg-gruvbox-dark-bg-hard rounded-l" />
+                  {/* 1-tab-button: red delete button */}
+                  <button
+                    type="button"
+                    onClick={() => removeIngredient(index)}
+                    className="h-10 w-10 rounded-lg flex items-center justify-center
+                      bg-gruvbox-dark-red hover:bg-gruvbox-dark-red-bright text-gruvbox-dark-fg text-xl font-bold
+                      shadow-lg"
+                    title="Remove ingredient"
+                  >×</button>
+                </div>
+
+                {/* Content wrapper - sits on top of delete drawer */}
+                <div className="relative z-10 bg-gruvbox-dark-bg-soft space-y-2 rounded">
                 <div className="flex gap-2">
                   <input
                     ref={(el) => (ingredientRefs.current[index] = el)}
@@ -696,13 +720,6 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
                       required={false}
                     />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => removeIngredient(index)}
-                    className="px-3 py-2 bg-gruvbox-dark-red hover:bg-gruvbox-dark-red-bright rounded transition"
-                  >
-                    ×
-                  </button>
                 </div>
                 <PrepStepAutocomplete
                   value={ing.prep_step_description ?? ''}
@@ -733,6 +750,7 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
                   />
                   <span>Index this ingredient (makes it findable in recipe index)</span>
                 </label>
+                </div>{/* end content wrapper */}
               </div>
             ))}
           </div>
