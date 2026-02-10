@@ -675,11 +675,11 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
                 {/* translate-x-full: hidden state - pushed RIGHT (under the card) */}
                 {/* translate-x-0: visible state - at natural position (left of card) */}
                 <div
-                  className="absolute top-1 h-[68px] right-full flex items-center
+                  className="absolute -z-10 top-1 h-[68px] right-full flex items-center
                     translate-x-full
-                    group-hover:translate-x-0 hover:translate-x-0
-                    max-md:translate-x-0
-                    motion-reduce:transition-none motion-reduce:translate-x-0
+                    group-hover:-translate-x-6 hover:-translate-x-6
+                    max-md:-translate-x-6
+                    motion-reduce:transition-none motion-reduce:-translate-x-6
                     transition-transform duration-150 ease-out"
                 >
                   {/* Tab: same styling as card (bg + border), contains the button */}
@@ -697,7 +697,7 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
                 </div>
 
                 {/* Content wrapper - sits on top of delete drawer */}
-                <div className="relative z-10 bg-gruvbox-dark-bg-soft space-y-2 rounded">
+                <div className="relative bg-gruvbox-dark-bg-soft space-y-2 -ml-6 pl-6">
                 <div className="flex gap-2">
                   <input
                     ref={(el) => (ingredientRefs.current[index] = el)}

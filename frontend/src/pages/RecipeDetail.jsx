@@ -306,38 +306,41 @@ const RecipeDetail = () => {
           }`}>
             Prep Steps
           </h2>
-          <ol className="space-y-3">
+          <div className="rounded overflow-hidden">
             {recipe.prep_steps
               .sort((a, b) => a.order - b.order)
               .map((ps) => {
-                // Find linked ingredients by matching ingredient_ids to recipe ingredients
                 const linkedIngredients = ps.ingredient_ids
                   ?.map(id => recipe.ingredients?.find(ing => ing.id === id))
                   .filter(Boolean) || [];
 
                 return (
-                  <li key={ps.id} className="flex gap-3">
-                    <span className={`font-bold ${
+                  <div
+                    key={ps.id}
+                    className="flex items-baseline px-3 py-2"
+                  >
+                    <span className={isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'}>
+                      {linkedIngredients.length > 0
+                        ? linkedIngredients.map(ing => ing.ingredient_name).join(', ')
+                        : '—'}
+                    </span>
+                    <span
+                      className={`flex-1 overflow-hidden whitespace-nowrap mx-2 select-none tracking-[0.25em] ${
+                        isDark ? 'text-gruvbox-dark-gray/30' : 'text-gruvbox-light-gray/30'
+                      }`}
+                      aria-hidden="true"
+                    >
+                      {'·'.repeat(200)}
+                    </span>
+                    <span className={`shrink-0 ${
                       isDark ? 'text-gruvbox-dark-purple' : 'text-gruvbox-light-purple'
                     }`}>
-                      {ps.order + 1}.
+                      {ps.description}
                     </span>
-                    <div className="flex-1">
-                      <p className={isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'}>
-                        {ps.description}
-                      </p>
-                      {linkedIngredients.length > 0 && (
-                        <p className={`text-sm mt-1 ${
-                          isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'
-                        }`}>
-                          → {linkedIngredients.map(ing => ing.ingredient_name).join(', ')}
-                        </p>
-                      )}
-                    </div>
-                  </li>
+                  </div>
                 );
               })}
-          </ol>
+          </div>
         </div>
       )}
 
