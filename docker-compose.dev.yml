@@ -60,6 +60,7 @@ services:
       - "5173:5173"
     environment:
       - VITE_API_URL=http://localhost:8001
+      - VITE_ALLOWED_HOSTS=inverness.valley,kitchen.valley
     volumes:
       - ./frontend:/app
       - /app/node_modules
