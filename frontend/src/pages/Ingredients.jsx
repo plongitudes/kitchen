@@ -30,7 +30,7 @@ const Ingredients = () => {
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [showUnused, setShowUnused] = useState(false);
 
-  const categories = ['dairy', 'produce', 'meat', 'pantry', 'spices', 'seafood', 'condiments', 'baking', 'uncategorized'];
+  const categories = ['dairy', 'produce', 'meat', 'pantry', 'pasta', 'spices', 'seafood', 'condiments', 'baking', 'uncategorized'];
 
   const loadIngredients = async () => {
     try {

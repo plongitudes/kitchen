@@ -15,7 +15,7 @@ const IngredientDetail = ({ ingredient, onClose, onUpdate }) => {
   const [toast, setToast] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null);
 
-  const categories = ['dairy', 'produce', 'meat', 'pantry', 'spices', 'seafood', 'condiments', 'baking'];
+  const categories = ['dairy', 'produce', 'meat', 'pantry', 'pasta', 'spices', 'seafood', 'condiments', 'baking'];
 
   const loadIngredientDetail = async () => {
     try {

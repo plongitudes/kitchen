@@ -16,7 +16,7 @@ const MapIngredientDialog = ({ unmappedIngredient, onClose, onComplete }) => {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
 
-  const categories = ['dairy', 'produce', 'meat', 'pantry', 'spices', 'seafood', 'condiments', 'baking'];
+  const categories = ['dairy', 'produce', 'meat', 'pantry', 'pasta', 'spices', 'seafood', 'condiments', 'baking'];
 
   useEffect(() => {
     loadIngredients();
