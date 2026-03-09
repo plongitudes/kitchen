@@ -17,7 +17,7 @@ const buildTimestamp = () => {
 export default defineConfig({
   plugins: [react()],
   server: {
-    allowedHosts: ['inverness.valley'],
+    allowedHosts: ['inverness.valley','kitchen.valley'],
   },
   build: {
     rollupOptions: {
