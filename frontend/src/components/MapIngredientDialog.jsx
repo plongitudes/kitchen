@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { ingredientAPI } from '../services/api';
+import { INGREDIENT_CATEGORIES } from '../config/ingredients';
 import Toast from './Toast';
 
 const MapIngredientDialog = ({ unmappedIngredient, onClose, onComplete }) => {
@@ -16,7 +17,7 @@ const MapIngredientDialog = ({ unmappedIngredient, onClose, onComplete }) => {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
 
-  const categories = ['dairy', 'produce', 'meat', 'pantry', 'pasta', 'spices', 'seafood', 'condiments', 'baking'];
+  const categories = INGREDIENT_CATEGORIES;
 
   useEffect(() => {
     loadIngredients();

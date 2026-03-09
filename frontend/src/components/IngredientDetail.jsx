@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { ingredientAPI } from '../services/api';
+import { INGREDIENT_CATEGORIES } from '../config/ingredients';
 import Toast from './Toast';
 import ConfirmDialog from './ConfirmDialog';
 
@@ -15,7 +16,7 @@ const IngredientDetail = ({ ingredient, onClose, onUpdate }) => {
   const [toast, setToast] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null);
 
-  const categories = ['dairy', 'produce', 'meat', 'pantry', 'pasta', 'spices', 'seafood', 'condiments', 'baking'];
+  const categories = INGREDIENT_CATEGORIES;
 
   const loadIngredientDetail = async () => {
     try {

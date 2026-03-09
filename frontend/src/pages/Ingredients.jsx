@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { ingredientAPI } from '../services/api';
+import { INGREDIENT_CATEGORIES } from '../config/ingredients';
 import IngredientDetail from '../components/IngredientDetail';
 import MapIngredientDialog from '../components/MapIngredientDialog';
 import Toast from '../components/Toast';
@@ -30,7 +31,7 @@ const Ingredients = () => {
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [showUnused, setShowUnused] = useState(false);
 
-  const categories = ['dairy', 'produce', 'meat', 'pantry', 'pasta', 'spices', 'seafood', 'condiments', 'baking', 'uncategorized'];
+  const categories = [...INGREDIENT_CATEGORIES, 'uncategorized'];
 
   const loadIngredients = async () => {
     try {
