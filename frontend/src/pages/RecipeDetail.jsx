@@ -198,7 +198,7 @@ const RecipeDetail = () => {
           )}
         </div>
 
-        {/* Recipe Type and Description */}
+        {/* Dish Type and Description */}
         {recipe.dish_type && (
           <div className={`text-lg ${isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'}`}>
             {recipe.dish_type}

@@ -185,7 +185,7 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
       });
       setError(null);
       setToast({
-        message: 'Recipe successfully re-imported from source! Your dish_type, prep_notes, and postmortem_notes have been preserved.',
+        message: 'Recipe successfully re-imported from source! Your dish type, prep notes, and postmortem notes have been preserved.',
         type: 'success',
       });
     } catch (err) {
@@ -608,13 +608,13 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div>
-            <label className="block mb-2">Type</label>
+            <label className="block mb-2">Dish Type</label>
             <input
               type="text"
               value={formData.dish_type}
               onChange={(e) => setFormData({ ...formData, dish_type: e.target.value })}
               className="w-full p-2 rounded bg-gruvbox-dark-bg border border-gruvbox-dark-gray text-gruvbox-dark-fg focus:outline-none focus:border-gruvbox-dark-orange-bright"
-              placeholder="e.g., dinner, breakfast"
+              placeholder="e.g., soup, tacos, salad"
             />
           </div>
           <div>
