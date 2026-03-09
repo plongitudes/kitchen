@@ -26,7 +26,7 @@ vi.mock('react-router-dom', async () => {
 const mockScrapedData = {
   name: 'Spaghetti Carbonara',
   description: 'A classic Italian pasta dish',
-  recipe_type: 'dinner',
+  dish_type: 'dinner',
   prep_time_minutes: 10,
   cook_time_minutes: 20,
   source_url: 'https://example.com/carbonara',

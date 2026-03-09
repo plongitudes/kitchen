@@ -22,7 +22,7 @@ class TestPrepStepAutocomplete:
             "/recipes",
             json={
                 "name": "Test Recipe for Autocomplete",
-                "recipe_type": "dinner",
+                "dish_type": "dinner",
                 "ingredients": [
                     {
                         "ingredient_name": "Onion",
@@ -191,7 +191,7 @@ class TestPrepStepAutocomplete:
             "/recipes",
             json={
                 "name": "Test Orphaned Prep Step",
-                "recipe_type": "dinner",
+                "dish_type": "dinner",
                 "ingredients": [
                     {
                         "ingredient_name": "Tomato",

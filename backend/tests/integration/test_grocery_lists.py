@@ -31,7 +31,7 @@ class TestGroceryListGeneration:
             "/recipes",
             json={
                 "name": "Pasta Carbonara",
-                "recipe_type": "dinner",
+                "dish_type": "dinner",
                 "cook_time_minutes": 20,
                 "ingredients": [
                     {"ingredient_name": "Pasta", "quantity": 1, "unit": "pound", "order": 1},
@@ -50,7 +50,7 @@ class TestGroceryListGeneration:
             "/recipes",
             json={
                 "name": "Mac and Cheese",
-                "recipe_type": "dinner",
+                "dish_type": "dinner",
                 "cook_time_minutes": 30,
                 "ingredients": [
                     {"ingredient_name": "Pasta", "quantity": 500, "unit": "gram", "order": 1},
@@ -342,7 +342,7 @@ class TestGroceryListGeneration:
             "/recipes",
             json={
                 "name": "Test Recipe 1",
-                "recipe_type": "lunch",
+                "dish_type": "lunch",
                 "cook_time_minutes": 10,
                 "ingredients": [
                     {"ingredient_name": "Milk", "quantity": 1, "unit": "cup", "order": 1},
@@ -355,7 +355,7 @@ class TestGroceryListGeneration:
             "/recipes",
             json={
                 "name": "Test Recipe 2",
-                "recipe_type": "lunch",
+                "dish_type": "lunch",
                 "cook_time_minutes": 10,
                 "ingredients": [
                     {"ingredient_name": "milk", "quantity": 1, "unit": "cup", "order": 1},
@@ -523,7 +523,7 @@ class TestGroceryListGeneration:
             "/recipes",
             json={
                 "name": "Stir Fry",
-                "recipe_type": "dinner",
+                "dish_type": "dinner",
                 "cook_time_minutes": 15,
                 "ingredients": [
                     {"ingredient_name": "Scallions", "quantity": 1, "unit": "bunch", "order": 1},
@@ -601,7 +601,7 @@ class TestGroceryListGeneration:
             "/recipes",
             json={
                 "name": "Simple Dish",
-                "recipe_type": "lunch",
+                "dish_type": "lunch",
                 "cook_time_minutes": 10,
                 "ingredients": [
                     {"ingredient_name": "Main Ingredient", "quantity": 2, "unit": "cup", "order": 1},
@@ -679,7 +679,7 @@ class TestGroceryListGeneration:
             "/recipes",
             json={
                 "name": "Recipe with Tablespoons",
-                "recipe_type": "dinner",
+                "dish_type": "dinner",
                 "cook_time_minutes": 20,
                 "ingredients": [
                     {"ingredient_name": "Soy Sauce", "quantity": 2, "unit": "tablespoon", "order": 1},
@@ -692,7 +692,7 @@ class TestGroceryListGeneration:
             "/recipes",
             json={
                 "name": "Recipe with Milliliters",
-                "recipe_type": "dinner",
+                "dish_type": "dinner",
                 "cook_time_minutes": 20,
                 "ingredients": [
                     {"ingredient_name": "Soy Sauce", "quantity": 50, "unit": "ml", "order": 1},

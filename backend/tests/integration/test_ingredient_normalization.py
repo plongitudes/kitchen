@@ -75,7 +75,7 @@ class TestIngredientNormalization:
             "/recipes",
             json={
                 "name": "Test Recipe",
-                "recipe_type": "breakfast",
+                "dish_type": "breakfast",
                 "cook_time_minutes": 10,
                 "ingredients": [
                     {"ingredient_name": "whole milk", "quantity": 1, "unit": "cup", "order": 1},
@@ -107,7 +107,7 @@ class TestIngredientNormalization:
             "/recipes",
             json={
                 "name": "Test Recipe 2",
-                "recipe_type": "breakfast",
+                "dish_type": "breakfast",
                 "cook_time_minutes": 10,
                 "ingredients": [
                     {"ingredient_name": "milk", "quantity": 2, "unit": "cup", "order": 1},
@@ -132,7 +132,7 @@ class TestIngredientNormalization:
             "/recipes",
             json={
                 "name": "Pancakes",
-                "recipe_type": "breakfast",
+                "dish_type": "breakfast",
                 "cook_time_minutes": 15,
                 "ingredients": [
                     {"ingredient_name": "whole milk", "quantity": 1, "unit": "cup", "order": 1},
@@ -146,7 +146,7 @@ class TestIngredientNormalization:
             "/recipes",
             json={
                 "name": "French Toast",
-                "recipe_type": "breakfast",
+                "dish_type": "breakfast",
                 "cook_time_minutes": 10,
                 "ingredients": [
                     {"ingredient_name": "milk", "quantity": 0.5, "unit": "cup", "order": 1},
@@ -247,7 +247,7 @@ class TestIngredientNormalization:
             "/recipes",
             json={
                 "name": "Mystery Dish 1",
-                "recipe_type": "dinner",
+                "dish_type": "dinner",
                 "cook_time_minutes": 20,
                 "ingredients": [
                     {"ingredient_name": "unicorn dust", "quantity": 1, "unit": "pinch", "order": 1},
@@ -260,7 +260,7 @@ class TestIngredientNormalization:
             "/recipes",
             json={
                 "name": "Mystery Dish 2",
-                "recipe_type": "dinner",
+                "dish_type": "dinner",
                 "cook_time_minutes": 15,
                 "ingredients": [
                     {"ingredient_name": "Unicorn Dust", "quantity": 2, "unit": "pinch", "order": 1},
@@ -347,7 +347,7 @@ class TestIngredientNormalization:
             "/recipes",
             json={
                 "name": "Bread",
-                "recipe_type": "side",
+                "dish_type": "side",
                 "cook_time_minutes": 60,
                 "ingredients": [
                     {"ingredient_name": "AP FLOUR", "quantity": 3, "unit": "cup", "order": 1},

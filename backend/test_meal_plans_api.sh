@@ -51,7 +51,7 @@ if [ -z "$SEQUENCE_ID" ]; then
       -H "Content-Type: application/json" \
       -d "{
         \"name\": \"Test Recipe\",
-        \"recipe_type\": \"dinner\",
+        \"dish_type\": \"dinner\",
         \"owner_id\": \"$USER_ID\",
         \"ingredients\": [],
         \"instructions\": []

@@ -69,7 +69,7 @@ class Recipe(Base):
     )
     name = Column(String, nullable=False)
     index_name = Column(String, nullable=True)  # Alternative name for alphabetical sorting
-    recipe_type = Column(String, nullable=True)  # e.g., breakfast, dinner, dessert
+    dish_type = Column(String, nullable=True)  # e.g., soup, salad, quesadillas
     description = Column(Text, nullable=True)  # Recipe description/summary
     prep_time_minutes = Column(Integer, nullable=True)
     cook_time_minutes = Column(Integer, nullable=True)

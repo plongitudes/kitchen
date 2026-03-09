@@ -28,7 +28,7 @@ class TestRecipeBasicOperations:
             "/recipes",
             json={
                 "name": "Spaghetti Carbonara",
-                "recipe_type": "dinner",
+                "dish_type": "dinner",
                 "prep_time_minutes": 10,
                 "cook_time_minutes": 20,
                 "prep_notes": "Bring water to boil while preparing sauce",
@@ -79,7 +79,7 @@ class TestRecipeBasicOperations:
 
         # Verify recipe fields
         assert data["name"] == "Spaghetti Carbonara"
-        assert data["recipe_type"] == "dinner"
+        assert data["dish_type"] == "dinner"
         assert data["prep_time_minutes"] == 10
         assert data["cook_time_minutes"] == 20
         assert data["prep_notes"] == "Bring water to boil while preparing sauce"
@@ -113,7 +113,7 @@ class TestRecipeBasicOperations:
             "/recipes",
             json={
                 "name": "Test Recipe",
-                "recipe_type": "lunch",
+                "dish_type": "lunch",
                 "cook_time_minutes": 15,
                 "ingredients": [
                     {
@@ -149,7 +149,7 @@ class TestRecipeBasicOperations:
                 "/recipes",
                 json={
                     "name": f"Recipe {i}",
-                    "recipe_type": "dinner",
+                    "dish_type": "dinner",
                     "cook_time_minutes": 20,
                     "ingredients": [],
                     "instructions": [],
@@ -173,7 +173,7 @@ class TestRecipeBasicOperations:
             "/recipes",
             json={
                 "name": "Original Name",
-                "recipe_type": "breakfast",
+                "dish_type": "breakfast",
                 "cook_time_minutes": 10,
                 "ingredients": [],
                 "instructions": [],
@@ -197,7 +197,7 @@ class TestRecipeBasicOperations:
         assert data["prep_time_minutes"] == 5
         assert data["postmortem_notes"] == "This recipe is amazing!"
         # Recipe type should remain unchanged
-        assert data["recipe_type"] == "breakfast"
+        assert data["dish_type"] == "breakfast"
         assert data["cook_time_minutes"] == 10
 
 
@@ -214,7 +214,7 @@ class TestRecipeRetirement:
             "/recipes",
             json={
                 "name": "To Be Retired",
-                "recipe_type": "dinner",
+                "dish_type": "dinner",
                 "cook_time_minutes": 30,
                 "ingredients": [],
                 "instructions": [],
@@ -244,7 +244,7 @@ class TestRecipeRetirement:
             "/recipes",
             json={
                 "name": "Retired Recipe",
-                "recipe_type": "dinner",
+                "dish_type": "dinner",
                 "cook_time_minutes": 20,
                 "ingredients": [],
                 "instructions": [],
@@ -270,7 +270,7 @@ class TestRecipeRetirement:
             "/recipes",
             json={
                 "name": "To Be Restored",
-                "recipe_type": "lunch",
+                "dish_type": "lunch",
                 "cook_time_minutes": 15,
                 "ingredients": [],
                 "instructions": [],
@@ -302,7 +302,7 @@ class TestRecipeRetirement:
             "/recipes",
             json={
                 "name": "Template Recipe",
-                "recipe_type": "dinner",
+                "dish_type": "dinner",
                 "cook_time_minutes": 30,
                 "ingredients": [],
                 "instructions": [],
@@ -362,7 +362,7 @@ class TestRecipeIngredients:
             "/recipes",
             json={
                 "name": "Test Recipe",
-                "recipe_type": "dinner",
+                "dish_type": "dinner",
                 "cook_time_minutes": 20,
                 "ingredients": [
                     {
@@ -488,7 +488,7 @@ class TestRecipeInstructions:
             "/recipes",
             json={
                 "name": "Test Recipe",
-                "recipe_type": "dinner",
+                "dish_type": "dinner",
                 "cook_time_minutes": 20,
                 "ingredients": [],
                 "instructions": [
@@ -606,7 +606,7 @@ class TestRecipePrepSteps:
             "/recipes",
             json={
                 "name": "Test Recipe with Prep",
-                "recipe_type": "dinner",
+                "dish_type": "dinner",
                 "cook_time_minutes": 20,
                 "ingredients": [
                     {
@@ -654,7 +654,7 @@ class TestRecipePrepSteps:
             "/recipes",
             json={
                 "name": "Recipe with Prep Steps",
-                "recipe_type": "dinner",
+                "dish_type": "dinner",
                 "cook_time_minutes": 30,
                 "ingredients": [
                     {
@@ -709,7 +709,7 @@ class TestRecipePrepSteps:
             "/recipes",
             json={
                 "name": "Recipe with Multi-Ingredient Prep",
-                "recipe_type": "dinner",
+                "dish_type": "dinner",
                 "cook_time_minutes": 25,
                 "ingredients": [
                     {"ingredient_name": "Onion", "quantity": 1, "unit": "whole", "order": 0},
@@ -890,7 +890,7 @@ class TestRecipeUsage:
             "/recipes",
             json={
                 "name": "Unused Recipe",
-                "recipe_type": "dinner",
+                "dish_type": "dinner",
                 "cook_time_minutes": 20,
                 "ingredients": [],
                 "instructions": [],
@@ -917,7 +917,7 @@ class TestRecipeUsage:
             "/recipes",
             json={
                 "name": "Used Recipe",
-                "recipe_type": "dinner",
+                "dish_type": "dinner",
                 "cook_time_minutes": 30,
                 "ingredients": [],
                 "instructions": [],
@@ -973,7 +973,7 @@ class TestRecipeUsage:
 class TestRecipeFiltering:
     """Test recipe filtering options."""
 
-    def test_filter_by_recipe_type(
+    def test_filter_by_dish_type(
         self,
         async_authenticated_client: TestClient,
     ):
@@ -983,7 +983,7 @@ class TestRecipeFiltering:
             "/recipes",
             json={
                 "name": "Breakfast Recipe",
-                "recipe_type": "breakfast",
+                "dish_type": "breakfast",
                 "cook_time_minutes": 10,
                 "ingredients": [],
                 "instructions": [],
@@ -993,7 +993,7 @@ class TestRecipeFiltering:
             "/recipes",
             json={
                 "name": "Dinner Recipe",
-                "recipe_type": "dinner",
+                "dish_type": "dinner",
                 "cook_time_minutes": 30,
                 "ingredients": [],
                 "instructions": [],
@@ -1001,11 +1001,11 @@ class TestRecipeFiltering:
         )
 
         # Filter by breakfast
-        response = async_authenticated_client.get("/recipes?recipe_type=breakfast")
+        response = async_authenticated_client.get("/recipes?dish_type=breakfast")
 
         assert response.status_code == 200
         recipes = response.json()
-        assert all(r["recipe_type"] == "breakfast" for r in recipes)
+        assert all(r["dish_type"] == "breakfast" for r in recipes)
         assert any(r["name"] == "Breakfast Recipe" for r in recipes)
 
     def test_filter_by_owner(
@@ -1019,7 +1019,7 @@ class TestRecipeFiltering:
             "/recipes",
             json={
                 "name": "My Recipe",
-                "recipe_type": "lunch",
+                "dish_type": "lunch",
                 "cook_time_minutes": 15,
                 "ingredients": [],
                 "instructions": [],
@@ -1042,7 +1042,7 @@ class TestRecipeIndex:
         # Create recipes with indexed ingredients
         chicken_recipe = {
             "name": "Chicken Burritos",
-            "recipe_type": "dinner",
+            "dish_type": "dinner",
             "ingredients": [
                 {
                     "ingredient_name": "chicken",
@@ -1064,7 +1064,7 @@ class TestRecipeIndex:
 
         chicken_soup_recipe = {
             "name": "Chicken Soup",
-            "recipe_type": "dinner",
+            "dish_type": "dinner",
             "ingredients": [
                 {
                     "ingredient_name": "chicken",
@@ -1123,7 +1123,7 @@ class TestRecipeIndex:
         """Test index includes standalone recipes without indexed ingredients."""
         recipe = {
             "name": "Apple Pie",
-            "recipe_type": "dessert",
+            "dish_type": "dessert",
             "ingredients": [
                 {
                     "ingredient_name": "apples",

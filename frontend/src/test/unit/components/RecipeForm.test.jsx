@@ -34,7 +34,7 @@ vi.mock('react-router-dom', async () => {
 const validRecipeData = {
   id: 'recipe-123',
   name: 'Test Recipe',
-  recipe_type: 'dinner',
+  dish_type: 'dinner',
   description: 'A test recipe',
   prep_time_minutes: 15,
   cook_time_minutes: 30,

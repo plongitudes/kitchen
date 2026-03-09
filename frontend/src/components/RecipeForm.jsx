@@ -4,6 +4,8 @@ import { recipeAPI } from '../services/api';
 import Toast from './Toast';
 import UnitAutocomplete from './UnitAutocomplete';
 import PrepStepAutocomplete from './PrepStepAutocomplete';
+import kitchenStarOn from '../assets/kitchen-star-on.png';
+import kitchenStarOff from '../assets/kitchen-star-off.png';
 
 const RecipeForm = ({ recipeId = null, initialData = null }) => {
   const navigate = useNavigate();
@@ -21,7 +23,7 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
   const [formData, setFormData] = useState({
     name: '',
     index_name: '',
-    recipe_type: '',
+    dish_type: '',
     description: '',
     prep_time_minutes: '',
     cook_time_minutes: '',
@@ -76,7 +78,7 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
       setFormData({
         name: initialData.name || '',
         index_name: initialData.index_name || '',
-        recipe_type: initialData.recipe_type || '',
+        dish_type: initialData.dish_type || '',
         description: initialData.description || '',
         prep_time_minutes: initialData.prep_time_minutes || '',
         cook_time_minutes: initialData.cook_time_minutes || '',
@@ -108,7 +110,7 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
       const payload = {
         name: formData.name,
         index_name: formData.index_name || null,
-        recipe_type: formData.recipe_type || null,
+        dish_type: formData.dish_type || null,
         description: formData.description || null,
         prep_time_minutes: formData.prep_time_minutes ? parseInt(formData.prep_time_minutes) : null,
         cook_time_minutes: formData.cook_time_minutes ? parseInt(formData.cook_time_minutes) : null,
@@ -176,14 +178,14 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
         ingredients: (response.data.ingredients || []).sort((a, b) => a.order - b.order),
         instructions: (response.data.instructions || []).sort((a, b) => a.step_number - b.step_number),
         // Preserve user edits
-        recipe_type: formData.recipe_type,
+        dish_type: formData.dish_type,
         prep_notes: formData.prep_notes,
         postmortem_notes: formData.postmortem_notes,
         source_url: formData.source_url,
       });
       setError(null);
       setToast({
-        message: 'Recipe successfully re-imported from source! Your recipe_type, prep_notes, and postmortem_notes have been preserved.',
+        message: 'Recipe successfully re-imported from source! Your dish_type, prep_notes, and postmortem_notes have been preserved.',
         type: 'success',
       });
     } catch (err) {
@@ -609,8 +611,8 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
             <label className="block mb-2">Type</label>
             <input
               type="text"
-              value={formData.recipe_type}
-              onChange={(e) => setFormData({ ...formData, recipe_type: e.target.value })}
+              value={formData.dish_type}
+              onChange={(e) => setFormData({ ...formData, dish_type: e.target.value })}
               className="w-full p-2 rounded bg-gruvbox-dark-bg border border-gruvbox-dark-gray text-gruvbox-dark-fg focus:outline-none focus:border-gruvbox-dark-orange-bright"
               placeholder="e.g., dinner, breakfast"
             />
@@ -682,8 +684,8 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
                     motion-reduce:transition-none motion-reduce:-translate-x-6
                     transition-transform duration-150 ease-out"
                 >
-                  {/* Tab: same styling as card (bg + border), contains the button */}
-                  <div className="h-14 px-2 flex items-center justify-center
+                  {/* Tab: same styling as card (bg + border), contains action buttons */}
+                  <div className="h-14 px-2 flex items-center gap-1
                     bg-gruvbox-dark-bg-soft border border-gruvbox-dark-gray border-r-0 rounded-l-lg"
                   >
                     <button
@@ -693,6 +695,19 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
                         bg-gruvbox-dark-red hover:bg-gruvbox-dark-red-bright text-gruvbox-dark-fg text-xl font-bold"
                       title="Remove ingredient"
                     >×</button>
+                    <button
+                      type="button"
+                      onClick={() => updateIngredient(index, 'is_indexed', !ing.is_indexed)}
+                      className="h-10 w-10 rounded flex items-center justify-center
+                        bg-gruvbox-dark-green hover:bg-gruvbox-dark-green-bright transition-colors"
+                      title={ing.is_indexed ? 'Remove from index' : 'Add to index'}
+                    >
+                      <img
+                        src={ing.is_indexed ? kitchenStarOn : kitchenStarOff}
+                        alt={ing.is_indexed ? 'Indexed' : 'Not indexed'}
+                        className="h-6 w-6"
+                      />
+                    </button>
                   </div>
                 </div>
 
@@ -745,15 +760,6 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
                   showCancelButton={shouldShowCancelButton(ing)}
                   onCancel={() => handleCancelPrepStepChange(index)}
                 />
-                <label className="flex items-center gap-2 text-sm text-gruvbox-dark-gray mt-1">
-                  <input
-                    type="checkbox"
-                    checked={ing.is_indexed || false}
-                    onChange={(e) => updateIngredient(index, 'is_indexed', e.target.checked)}
-                    className="rounded"
-                  />
-                  <span>Index this ingredient (makes it findable in recipe index)</span>
-                </label>
                 </div>{/* end content wrapper */}
               </div>
             ))}
@@ -896,7 +902,7 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
               prep/cook times, ingredients, and instructions.
             </p>
             <p className="mb-4 text-gruvbox-dark-yellow">
-              <strong>Preserved:</strong> Your recipe_type, prep_notes, and postmortem_notes will be kept.
+              <strong>Preserved:</strong> Your dish_type, prep_notes, and postmortem_notes will be kept.
             </p>
             <p className="mb-6 text-gruvbox-dark-red">
               <strong>Warning:</strong> Current ingredients and instructions will be replaced with the latest

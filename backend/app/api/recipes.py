@@ -49,7 +49,7 @@ router = APIRouter(prefix="/recipes", tags=["recipes"])
 async def list_recipes(
     owner_id: Optional[UUID] = Query(None, description="Filter by owner"),
     include_retired: bool = Query(False, description="Include retired recipes"),
-    recipe_type: Optional[str] = Query(None, description="Filter by recipe type"),
+    dish_type: Optional[str] = Query(None, description="Filter by recipe type"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -58,7 +58,7 @@ async def list_recipes(
     Args:
         owner_id: Optional UUID to filter recipes by owner
         include_retired: Include soft-deleted recipes in results
-        recipe_type: Filter by recipe type (e.g., "dinner", "breakfast")
+        dish_type: Filter by recipe type (e.g., "dinner", "breakfast")
         db: Database session (injected)
         current_user: Authenticated user (injected)
 
@@ -69,7 +69,7 @@ async def list_recipes(
         db=db,
         owner_id=owner_id,
         include_retired=include_retired,
-        recipe_type=recipe_type,
+        dish_type=dish_type,
     )
     return recipes
 
@@ -145,7 +145,7 @@ async def export_all_recipes_json(
         "recipes": [
             {
                 "name": recipe.name,
-                "recipe_type": recipe.recipe_type,
+                "dish_type": recipe.dish_type,
                 "description": recipe.description,
                 "prep_time_minutes": recipe.prep_time_minutes,
                 "cook_time_minutes": recipe.cook_time_minutes,
@@ -215,7 +215,7 @@ async def import_recipe_json(
         # Create recipe
         create_data = RecipeCreate(
             name=recipe_data["name"],
-            recipe_type=recipe_data.get("recipe_type"),
+            dish_type=recipe_data.get("dish_type"),
             description=recipe_data.get("description"),
             prep_time_minutes=recipe_data.get("prep_time_minutes"),
             cook_time_minutes=recipe_data.get("cook_time_minutes"),
@@ -283,7 +283,7 @@ async def import_multiple_recipes_json(
                 # Create recipe
                 create_data = RecipeCreate(
                     name=recipe_data["name"],
-                    recipe_type=recipe_data.get("recipe_type"),
+                    dish_type=recipe_data.get("dish_type"),
                     description=recipe_data.get("description"),
                     prep_time_minutes=recipe_data.get("prep_time_minutes"),
                     cook_time_minutes=recipe_data.get("cook_time_minutes"),
@@ -337,7 +337,7 @@ async def reimport_recipe(
     """Re-import recipe from its source URL, updating ingredients and instructions.
 
     Fetches fresh data from the recipe's source_url and updates the recipe.
-    Preserves user edits to postmortem_notes and recipe_type, but replaces
+    Preserves user edits to postmortem_notes and dish_type, but replaces
     all ingredients and instructions with newly scraped data.
 
     Args:
@@ -719,7 +719,7 @@ async def export_recipe_json(
     # Build export data structure
     export_data = {
         "name": recipe.name,
-        "recipe_type": recipe.recipe_type,
+        "dish_type": recipe.dish_type,
         "description": recipe.description,
         "prep_time_minutes": recipe.prep_time_minutes,
         "cook_time_minutes": recipe.cook_time_minutes,

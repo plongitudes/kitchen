@@ -47,7 +47,7 @@ const RecipeImportModal = ({ isOpen, onClose }) => {
       // Create recipe with scraped data
       const recipeData = {
         name: scrapedData.name,
-        recipe_type: scrapedData.recipe_type,
+        dish_type: scrapedData.dish_type,
         description: scrapedData.description,
         prep_time_minutes: scrapedData.prep_time_minutes,
         cook_time_minutes: scrapedData.cook_time_minutes,
@@ -231,7 +231,7 @@ const RecipeImportModal = ({ isOpen, onClose }) => {
                 {scrapedData.cook_time_minutes && (
                   <span>Cook: {scrapedData.cook_time_minutes} min</span>
                 )}
-                <span>Type: {scrapedData.recipe_type}</span>
+                <span>Type: {scrapedData.dish_type}</span>
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">

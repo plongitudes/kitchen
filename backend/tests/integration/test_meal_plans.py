@@ -570,7 +570,7 @@ class TestGroceryListAutoGeneration:
             json={
                 "name": "Test Pasta",
                 "servings": 4,
-                "recipe_type": "dinner",
+                "dish_type": "dinner",
                 "cook_time_minutes": 30,
                 "instructions": [{"step_number": 1, "description": "Cook pasta"}],
                 "ingredients": [

@@ -50,7 +50,7 @@ RECIPE_RESPONSE=$(curl -s -X POST $BASE_URL/recipes \
   -H "Content-Type: application/json" \
   -d "{
     \"name\": \"Spaghetti Carbonara\",
-    \"recipe_type\": \"dinner\",
+    \"dish_type\": \"dinner\",
     \"prep_time_minutes\": 10,
     \"cook_time_minutes\": 20,
     \"owner_id\": \"$USER_ID\",

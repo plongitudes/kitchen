@@ -21,6 +21,7 @@ from app.models.recipe import (
     RecipePrepStep,
     PrepStepIngredient,
 )
+from app.utils.index_text import generate_sub_entry
 from app.models.ingredient import CommonIngredient, IngredientAlias
 from app.models.schedule import WeekDayAssignment
 from app.schemas.recipe import (
@@ -87,7 +88,7 @@ class RecipeService:
         db: AsyncSession,
         owner_id: Optional[UUID] = None,
         include_retired: bool = False,
-        recipe_type: Optional[str] = None,
+        dish_type: Optional[str] = None,
     ) -> List[Recipe]:
         """Get list of recipes with optional filtering."""
         query = select(Recipe).options(
@@ -101,8 +102,8 @@ class RecipeService:
             query = query.where(Recipe.owner_id == owner_id)
 
         # Filter by recipe type
-        if recipe_type:
-            query = query.where(Recipe.recipe_type == recipe_type)
+        if dish_type:
+            query = query.where(Recipe.dish_type == dish_type)
 
         # Exclude retired by default
         if not include_retired:
@@ -144,7 +145,7 @@ class RecipeService:
             owner_id=owner_id,
             name=recipe_data.name,
             index_name=recipe_data.index_name,
-            recipe_type=recipe_data.recipe_type,
+            dish_type=recipe_data.dish_type,
             description=recipe_data.description,
             prep_time_minutes=recipe_data.prep_time_minutes,
             cook_time_minutes=recipe_data.cook_time_minutes,
@@ -247,8 +248,8 @@ class RecipeService:
             recipe.name = recipe_data.name
         if hasattr(recipe_data, "index_name") and recipe_data.index_name is not None:
             recipe.index_name = recipe_data.index_name
-        if recipe_data.recipe_type is not None:
-            recipe.recipe_type = recipe_data.recipe_type
+        if recipe_data.dish_type is not None:
+            recipe.dish_type = recipe_data.dish_type
         if recipe_data.prep_time_minutes is not None:
             recipe.prep_time_minutes = recipe_data.prep_time_minutes
         if recipe_data.cook_time_minutes is not None:
@@ -1093,7 +1094,7 @@ class RecipeService:
 
             return RecipeImportPreviewResponse(
                 name=scraper.title(),
-                recipe_type="dinner",  # Default
+                dish_type="dinner",  # Default
                 description=description,
                 prep_time_minutes=prep_time,
                 cook_time_minutes=cook_time,
@@ -1148,7 +1149,7 @@ class RecipeService:
         recipe.description = preview.description
         recipe.prep_time_minutes = preview.prep_time_minutes
         recipe.cook_time_minutes = preview.cook_time_minutes
-        # Note: Don't update recipe_type - user may have customized it
+        # Note: Don't update dish_type - user may have customized it
 
         # Delete existing ingredients and instructions
         for ingredient in recipe.ingredients:
@@ -1239,10 +1240,19 @@ class RecipeService:
                         else ingredient.ingredient_name
                     )
 
+                    # Generate sub-entry text: use index_name override, or algorithm
+                    if recipe.index_name:
+                        sub_entry = recipe.index_name.lower()
+                    else:
+                        sub_entry = generate_sub_entry(
+                            recipe.name, ingredient_key, recipe.dish_type
+                        )
+
                     ingredient_to_recipes[ingredient_key].append(
                         {
                             "id": str(recipe.id),
                             "name": recipe.name,
+                            "sub_entry": sub_entry,
                         }
                     )
 

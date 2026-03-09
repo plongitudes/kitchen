@@ -78,17 +78,17 @@ class TestGetRecipes:
         assert "User1 Recipe" in names
         assert "User2 Recipe" not in names
 
-    async def test_filters_by_recipe_type(self, async_db_session, async_test_user):
+    async def test_filters_by_dish_type(self, async_db_session, async_test_user):
         """Test that recipes can be filtered by type."""
         dinner = RecipeFactory.build(
-            owner_id=async_test_user.id, name="Dinner", recipe_type="dinner"
+            owner_id=async_test_user.id, name="Dinner", dish_type="dinner"
         )
-        lunch = RecipeFactory.build(owner_id=async_test_user.id, name="Lunch", recipe_type="lunch")
+        lunch = RecipeFactory.build(owner_id=async_test_user.id, name="Lunch", dish_type="lunch")
         async_db_session.add(dinner)
         async_db_session.add(lunch)
         await async_db_session.commit()
 
-        result = await RecipeService.get_recipes(async_db_session, recipe_type="dinner")
+        result = await RecipeService.get_recipes(async_db_session, dish_type="dinner")
 
         names = [r.name for r in result]
         assert "Dinner" in names
@@ -221,7 +221,7 @@ class TestCreateRecipe:
         """Test creating a recipe without ingredients or instructions."""
         recipe_data = RecipeCreate(
             name="New Recipe",
-            recipe_type="dinner",
+            dish_type="dinner",
             description="A new dinner recipe",
             ingredients=[],
             instructions=[],
@@ -233,14 +233,14 @@ class TestCreateRecipe:
 
         assert result is not None
         assert result.name == "New Recipe"
-        assert result.recipe_type == "dinner"
+        assert result.dish_type == "dinner"
         assert result.owner_id == async_test_user.id
 
     async def test_creates_recipe_with_ingredients(self, async_db_session, async_test_user):
         """Test creating a recipe with ingredients."""
         recipe_data = RecipeCreate(
             name="Recipe with Ingredients",
-            recipe_type="dinner",
+            dish_type="dinner",
             ingredients=[
                 RecipeIngredientCreate(ingredient_name="Flour", quantity=2.0, unit="cup", order=0),
                 RecipeIngredientCreate(ingredient_name="Sugar", quantity=1.0, unit="cup", order=1),
@@ -262,7 +262,7 @@ class TestCreateRecipe:
         """Test creating a recipe with instructions."""
         recipe_data = RecipeCreate(
             name="Recipe with Instructions",
-            recipe_type="dinner",
+            dish_type="dinner",
             ingredients=[],
             instructions=[
                 RecipeInstructionCreate(step_number=1, description="Preheat oven"),
@@ -293,7 +293,7 @@ class TestCreateRecipe:
 
         recipe_data = RecipeCreate(
             name="Recipe with Common Ingredient",
-            recipe_type="dinner",
+            dish_type="dinner",
             ingredients=[
                 RecipeIngredientCreate(ingredient_name="flour", quantity=2.0, unit="cup", order=0),
             ],
@@ -952,7 +952,7 @@ class TestPrepStepCRUD:
         # Create recipe with ingredients using the service (proper relationship setup)
         recipe_data = RecipeCreate(
             name="Recipe",
-            recipe_type="dinner",
+            dish_type="dinner",
             ingredients=[
                 RecipeIngredientCreate(
                     ingredient_name="Onion", quantity=1.0, unit="whole", order=0
@@ -1026,7 +1026,7 @@ class TestCreateRecipeWithPrepSteps:
         """Test creating a recipe with prep steps linked to ingredients."""
         recipe_data = RecipeCreate(
             name="Recipe with Prep Steps",
-            recipe_type="dinner",
+            dish_type="dinner",
             ingredients=[
                 RecipeIngredientCreate(
                     ingredient_name="Onion", quantity=1.0, unit="whole", order=0
@@ -1062,7 +1062,7 @@ class TestCreateRecipeWithPrepSteps:
         """Test creating a prep step that links to multiple ingredients."""
         recipe_data = RecipeCreate(
             name="Recipe with Multi-Ingredient Prep",
-            recipe_type="dinner",
+            dish_type="dinner",
             ingredients=[
                 RecipeIngredientCreate(
                     ingredient_name="Onion", quantity=1.0, unit="whole", order=0

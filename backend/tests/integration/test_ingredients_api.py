@@ -217,7 +217,7 @@ class TestIngredientAliases:
             "/recipes",
             json={
                 "name": "Pepper Stir Fry",
-                "recipe_type": "dinner",
+                "dish_type": "dinner",
                 "cook_time_minutes": 15,
                 "ingredients": [
                     {"ingredient_name": "bell peppers", "quantity": 2, "unit": "whole", "order": 1},
@@ -258,7 +258,7 @@ class TestUnmappedIngredients:
             "/recipes",
             json={
                 "name": "Test Soup",
-                "recipe_type": "dinner",
+                "dish_type": "dinner",
                 "cook_time_minutes": 30,
                 "ingredients": [
                     {"ingredient_name": "mystery vegetable", "quantity": 1, "unit": "cup", "order": 1},
@@ -289,7 +289,7 @@ class TestIngredientMapping:
             "/recipes",
             json={
                 "name": "Garlic Bread",
-                "recipe_type": "side",
+                "dish_type": "side",
                 "cook_time_minutes": 10,
                 "ingredients": [
                     {"ingredient_name": "garlic cloves", "quantity": 4, "unit": "whole", "order": 1},
@@ -329,7 +329,7 @@ class TestIngredientMapping:
             "/recipes",
             json={
                 "name": "Basil Pesto",
-                "recipe_type": "sauce",
+                "dish_type": "sauce",
                 "cook_time_minutes": 5,
                 "ingredients": [
                     {"ingredient_name": "fresh basil leaves", "quantity": 2, "unit": "cup", "order": 1},
@@ -408,7 +408,7 @@ class TestAutoMap:
                 "/recipes",
                 json={
                     "name": f"Test Recipe {i}",
-                    "recipe_type": "dinner",
+                    "dish_type": "dinner",
                     "cook_time_minutes": 20,
                     "ingredients": [
                         {"ingredient_name": "common test ingredient", "quantity": 1, "unit": "cup", "order": 1},

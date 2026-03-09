@@ -23,7 +23,7 @@ if [ "$RECIPE_ID" = "null" ] || [ -z "$RECIPE_ID" ]; then
     -d '{"url": "https://www.allrecipes.com/recipe/10813/best-chocolate-chip-cookies/"}' | \
     jq -r '{
       name: .name,
-      recipe_type: .recipe_type,
+      dish_type: .dish_type,
       description: .description,
       prep_time_minutes: .prep_time_minutes,
       cook_time_minutes: .cook_time_minutes,

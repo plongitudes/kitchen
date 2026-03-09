@@ -97,6 +97,7 @@ class RecipeIngredientResponse(RecipeIngredientBase):
             unit=ingredient.unit,
             order=ingredient.order,
             prep_note=ingredient.prep_note,
+            is_indexed=ingredient.is_indexed,
             created_at=ingredient.created_at,
             linked_prep_step_ids=linked_prep_step_ids,
         )
@@ -228,7 +229,7 @@ class RecipeBase(BaseModel):
 
     name: str = Field(..., min_length=1)
     index_name: Optional[str] = None  # Alternative name for alphabetical sorting
-    recipe_type: Optional[str] = None
+    dish_type: Optional[str] = None
     description: Optional[str] = None
     prep_time_minutes: Optional[int] = Field(None, ge=0)
     cook_time_minutes: Optional[int] = Field(None, ge=0)
@@ -250,7 +251,7 @@ class RecipeUpdate(BaseModel):
 
     name: Optional[str] = Field(None, min_length=1)
     index_name: Optional[str] = None  # Alternative name for alphabetical sorting
-    recipe_type: Optional[str] = None
+    dish_type: Optional[str] = None
     description: Optional[str] = None
     prep_time_minutes: Optional[int] = Field(None, ge=0)
     cook_time_minutes: Optional[int] = Field(None, ge=0)
@@ -335,7 +336,7 @@ class RecipeListFilters(BaseModel):
 
     owner_id: Optional[UUID] = None
     include_retired: bool = False
-    recipe_type: Optional[str] = None
+    dish_type: Optional[str] = None
 
 
 # ============================================================================
@@ -368,7 +369,7 @@ class RecipeImportPreviewResponse(BaseModel):
     """Preview of scraped recipe data before saving."""
 
     name: str
-    recipe_type: str = "dinner"  # Default
+    dish_type: str = "dinner"  # Default
     description: Optional[str] = None
     prep_time_minutes: Optional[int] = None
     cook_time_minutes: Optional[int] = None
@@ -387,6 +388,7 @@ class RecipeIndexRecipeRef(BaseModel):
 
     id: UUID
     name: str
+    sub_entry: Optional[str] = None
 
 
 class RecipeIndexEntry(BaseModel):

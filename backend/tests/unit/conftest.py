@@ -206,10 +206,10 @@ def mock_common_ingredient_with_aliases():
 def mock_recipe_list(mock_user):
     """Create a list of mock recipes for testing lists/collections."""
     return [
-        RecipeFactory.build(owner_id=mock_user.id, name="Breakfast Pancakes", recipe_type="breakfast"),
-        RecipeFactory.build(owner_id=mock_user.id, name="Lunch Salad", recipe_type="lunch"),
-        RecipeFactory.build(owner_id=mock_user.id, name="Dinner Pasta", recipe_type="dinner"),
-        RecipeFactory.build(owner_id=mock_user.id, name="Dessert Cake", recipe_type="dessert"),
+        RecipeFactory.build(owner_id=mock_user.id, name="Breakfast Pancakes", dish_type="breakfast"),
+        RecipeFactory.build(owner_id=mock_user.id, name="Lunch Salad", dish_type="lunch"),
+        RecipeFactory.build(owner_id=mock_user.id, name="Dinner Pasta", dish_type="dinner"),
+        RecipeFactory.build(owner_id=mock_user.id, name="Dessert Cake", dish_type="dessert"),
     ]
 
 
