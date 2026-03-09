@@ -382,8 +382,9 @@ const RecipeList = () => {
                                     className={`hover:underline ${
                                       isDark ? 'text-gruvbox-dark-blue-bright' : 'text-gruvbox-light-blue-bright'
                                     }`}
+                                    title={recipe.name}
                                   >
-                                    {recipe.name}
+                                    {recipe.sub_entry || recipe.name}
                                   </Link>
                                 </div>
                               ))}

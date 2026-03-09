@@ -45,8 +45,8 @@ describe('RecipeList - Index View', () => {
           type: 'ingredient',
           name: 'Chicken',
           recipes: [
-            { id: '3', name: 'Chicken Soup' },
-            { id: '4', name: 'Chicken Burritos' },
+            { id: '3', name: 'Chicken Soup', sub_entry: 'soup' },
+            { id: '4', name: 'Chicken Burritos', sub_entry: 'burritos' },
           ],
         },
         {
@@ -109,6 +109,26 @@ describe('RecipeList - Index View', () => {
     });
   });
 
+  it('displays sub_entry text under ingredient headings with full name as tooltip', async () => {
+    recipeAPI.get.mockResolvedValue({ data: mockIndexData });
+    renderWithProviders(<RecipeList />);
+
+    await waitFor(() => {
+      // Chicken recipes have sub_entry set — should show sub_entry text
+      const soupLink = screen.getByRole('link', { name: 'soup' });
+      expect(soupLink).toBeInTheDocument();
+      expect(soupLink).toHaveAttribute('title', 'Chicken Soup');
+
+      const burritosLink = screen.getByRole('link', { name: 'burritos' });
+      expect(burritosLink).toBeInTheDocument();
+      expect(burritosLink).toHaveAttribute('title', 'Chicken Burritos');
+
+      // Apple recipes have no sub_entry — should fall back to full name
+      expect(screen.getByRole('link', { name: 'Apple Pie' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Apple Crisp' })).toBeInTheDocument();
+    });
+  });
+
   it('displays standalone recipe entries', async () => {
     recipeAPI.get.mockResolvedValue({ data: mockIndexData });
     renderWithProviders(<RecipeList />);
@@ -145,9 +165,9 @@ describe('RecipeList - Index View', () => {
     const searchInput = screen.getByPlaceholderText('Search recipes or ingredients...');
     await user.type(searchInput, 'soup');
 
-    // Only Chicken Soup should be visible
+    // Only Chicken section should be visible (sub_entry "soup" displayed)
     await waitFor(() => {
-      expect(screen.getByText('Chicken Soup')).toBeInTheDocument();
+      expect(screen.getByText('soup')).toBeInTheDocument();
       expect(screen.queryByText('Apple Pie')).not.toBeInTheDocument();
       expect(screen.queryByText('Chocolate Cake')).not.toBeInTheDocument();
     });
