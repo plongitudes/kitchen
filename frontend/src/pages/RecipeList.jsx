@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { recipeAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import { usePageActions } from '../context/MenuBarContext';
 import RecipeImportModal from '../components/RecipeImportModal';
 import Toast from '../components/Toast';
 
@@ -70,6 +71,28 @@ const RecipeList = () => {
       event.target.value = ''; // Reset file input
     }
   };
+
+  // Register page actions
+  usePageActions([
+    {
+      id: 'show-retired',
+      label: 'Show retired',
+      variant: 'toggle',
+      checked: includeRetired,
+      onClick: (e) => setIncludeRetired(e.target.checked),
+      color: 'gray',
+    },
+    { id: 'import-url', label: 'Import from URL', onClick: () => setImportModalOpen(true), color: 'blue' },
+    {
+      id: 'import-json',
+      label: 'Import JSON',
+      variant: 'file-input',
+      accept: '.json',
+      onChange: handleJSONImport,
+      color: 'aqua',
+    },
+    { id: 'new-recipe', label: '+ New Recipe', onClick: () => navigate('/recipes/new'), color: 'green' },
+  ], [includeRetired]);
 
   // Filter index based on search query
   const filterIndex = (indexData, query) => {
@@ -204,59 +227,11 @@ const RecipeList = () => {
   return (
     <div className={`p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className={`text-3xl font-bold ${
-          isDark ? 'text-gruvbox-dark-orange-bright' : 'text-gruvbox-light-orange-bright'
-        }`}>
-          Recipe Index
-        </h1>
-        <div className="flex gap-4">
-          <label className={`flex items-center gap-2 ${
-            isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'
-          }`}>
-            <input
-              type="checkbox"
-              checked={includeRetired}
-              onChange={(e) => setIncludeRetired(e.target.checked)}
-              className="rounded"
-            />
-            <span>Show retired</span>
-          </label>
-          <button
-            onClick={() => setImportModalOpen(true)}
-            className={`px-4 py-2 rounded font-semibold transition ${
-              isDark
-                ? 'bg-gruvbox-dark-blue hover:bg-gruvbox-dark-blue-bright text-gruvbox-dark-bg'
-                : 'bg-gruvbox-light-blue hover:bg-gruvbox-light-blue-bright text-gruvbox-light-bg'
-            }`}
-          >
-            Import from URL
-          </button>
-          <label className={`px-4 py-2 rounded font-semibold transition cursor-pointer ${
-            isDark
-              ? 'bg-gruvbox-dark-aqua hover:bg-gruvbox-dark-aqua-bright text-gruvbox-dark-bg'
-              : 'bg-gruvbox-light-aqua hover:bg-gruvbox-light-aqua-bright text-gruvbox-light-bg'
-          }`}>
-            Import JSON
-            <input
-              type="file"
-              accept=".json"
-              onChange={handleJSONImport}
-              className="hidden"
-            />
-          </label>
-          <button
-            onClick={() => navigate('/recipes/new')}
-            className={`px-4 py-2 rounded font-semibold transition ${
-              isDark
-                ? 'bg-gruvbox-dark-green hover:bg-gruvbox-dark-green-bright text-gruvbox-dark-bg'
-                : 'bg-gruvbox-light-green hover:bg-gruvbox-light-green-bright text-gruvbox-light-bg'
-            }`}
-          >
-            + New Recipe
-          </button>
-        </div>
-      </div>
+      <h1 className={`text-3xl font-bold mb-6 ${
+        isDark ? 'text-gruvbox-dark-orange-bright' : 'text-gruvbox-light-orange-bright'
+      }`}>
+        Recipe Index
+      </h1>
 
       {/* Search Box */}
       {Object.keys(index).length > 0 && (

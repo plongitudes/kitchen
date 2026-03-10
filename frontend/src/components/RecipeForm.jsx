@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { recipeAPI } from '../services/api';
+import { usePageActions, useSectionActions } from '../context/MenuBarContext';
 import Toast from './Toast';
 import UnitAutocomplete from './UnitAutocomplete';
 import PrepStepAutocomplete from './PrepStepAutocomplete';
@@ -13,10 +14,12 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [ingredientDragOverIndex, setIngredientDragOverIndex] = useState(null);
   const [reimportModal, setReimportModal] = useState(false);
   const [reimporting, setReimporting] = useState(false);
   const [toast, setToast] = useState(null);
   const [prepStepsForAutocomplete, setPrepStepsForAutocomplete] = useState([]);
+  const [activeStepIndex, setActiveStepIndex] = useState(null);
   const ingredientRefs = useRef([]);
   const instructionRefs = useRef([]);
 
@@ -92,7 +95,7 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
   }, [initialData]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setLoading(true);
     setError(null);
 
@@ -391,6 +394,7 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
       inst.step_number = i + 1;
     });
     setFormData({ ...formData, instructions: updated });
+    setActiveStepIndex(null);
   };
 
   const cloneInstruction = (index) => {
@@ -501,50 +505,94 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
     setFormData({ ...formData, instructions: updated });
   };
 
+  const handleIngredientDragStart = (e, index) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', index.toString());
+  };
 
+  const handleIngredientDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setIngredientDragOverIndex(index);
+  };
+
+  const handleIngredientDragLeave = () => {
+    setIngredientDragOverIndex(null);
+  };
+
+  const handleIngredientDrop = (e, dropIndex) => {
+    e.preventDefault();
+    setIngredientDragOverIndex(null);
+    const dragIndex = parseInt(e.dataTransfer.getData('text/plain'));
+
+    if (dragIndex === dropIndex) return;
+
+    const updated = [...formData.ingredients];
+    const [draggedItem] = updated.splice(dragIndex, 1);
+    updated.splice(dropIndex, 0, draggedItem);
+
+    updated.forEach((ing, i) => {
+      ing.order = i;
+    });
+
+    setFormData({ ...formData, ingredients: updated });
+  };
+
+  const handleCancel = () => {
+    if (location.state?.returnTo) {
+      navigate(location.state.returnTo, {
+        state: { tab: location.state.tab }
+      });
+    } else {
+      navigate('/recipes');
+    }
+  };
+
+  // Register page actions
+  usePageActions([
+    { id: 'cancel', label: 'Cancel', onClick: handleCancel, color: 'gray' },
+    {
+      id: 'submit',
+      label: loading ? 'Saving...' : recipeId ? 'Save' : 'Create Recipe',
+      onClick: () => handleSubmit(),
+      color: 'green',
+      disabled: loading,
+    },
+    {
+      id: 'reimport',
+      label: 'Re-import',
+      onClick: () => setReimportModal(true),
+      color: 'blue',
+      hidden: !(recipeId && formData.source_url),
+      disabled: loading || reimporting,
+    },
+  ], [recipeId, formData, loading, reimporting]);
+
+  // Register section actions
+  useSectionActions('ingredients', [
+    { id: 'add-ingredient', label: '+ Ingredient', onClick: addIngredient, color: 'green' },
+  ], [formData]);
+
+  useSectionActions('instructions', [
+    { id: 'add-instruction', label: '+ Instruction', onClick: addInstruction, color: 'green' },
+    {
+      id: 'split-instruction',
+      label: 'Split Step',
+      onClick: () => cloneInstruction(activeStepIndex),
+      color: 'aqua',
+      disabled: activeStepIndex === null,
+    },
+    {
+      id: 'remove-instruction',
+      label: 'Remove Step',
+      onClick: () => removeInstruction(activeStepIndex),
+      color: 'red',
+      disabled: activeStepIndex === null,
+    },
+  ], [formData, activeStepIndex]);
 
   return (
     <form onSubmit={handleSubmit} className="max-w-4xl mx-auto p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gruvbox-dark-orange-bright">
-          {recipeId ? 'Edit Recipe' : 'New Recipe'}
-        </h1>
-        <div className="flex gap-2">
-          {recipeId && formData.source_url && (
-            <button
-              type="button"
-              onClick={() => setReimportModal(true)}
-              className="px-4 py-2 bg-gruvbox-dark-blue hover:bg-gruvbox-dark-blue-bright rounded transition"
-              disabled={loading || reimporting}
-            >
-              Re-import from Source
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              if (location.state?.returnTo) {
-                // If we have returnTo, preserve the tab state
-                navigate(location.state.returnTo, {
-                  state: { tab: location.state.tab }
-                });
-              } else {
-                navigate('/recipes');
-              }
-            }}
-            className="px-4 py-2 bg-gruvbox-dark-gray hover:bg-gruvbox-dark-gray-bright rounded transition"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-4 py-2 bg-gruvbox-dark-green hover:bg-gruvbox-dark-green-bright text-gruvbox-dark-fg rounded font-semibold transition disabled:opacity-50"
-          >
-            {loading ? 'Saving...' : recipeId ? 'Update Recipe' : 'Create Recipe'}
-          </button>
-        </div>
-      </div>
 
       {error && (
         <div className="mb-4 p-3 bg-gruvbox-dark-red text-gruvbox-dark-fg rounded">
@@ -653,25 +701,25 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
 
       {/* Ingredients */}
       <div className="bg-gruvbox-dark-bg-soft p-6 rounded-lg border border-gruvbox-dark-gray mb-6 relative z-0 overflow-visible">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gruvbox-dark-green-bright">
-            Ingredients
-          </h2>
-          <button
-            type="button"
-            onClick={addIngredient}
-            className="px-3 py-1 bg-gruvbox-dark-green hover:bg-gruvbox-dark-green-bright rounded transition"
-          >
-            + Add
-          </button>
-        </div>
+        <h2 className="text-xl font-semibold text-gruvbox-dark-green-bright mb-4">
+          Ingredients
+        </h2>
 
         {formData.ingredients.length === 0 ? (
           <p className="text-gruvbox-dark-gray">No ingredients yet. Click "Add" to get started.</p>
         ) : (
           <div className="space-y-3">
             {formData.ingredients.map((ing, index) => (
-              <div key={index} className="group relative">
+              <div
+                key={index}
+                className="group relative"
+                onDragOver={(e) => handleIngredientDragOver(e, index)}
+                onDragLeave={handleIngredientDragLeave}
+                onDrop={(e) => handleIngredientDrop(e, index)}
+              >
+                {ingredientDragOverIndex === index && (
+                  <div className="absolute -top-1 left-0 right-0 h-0.5 bg-gruvbox-dark-orange-bright shadow-lg z-10" />
+                )}
                 {/* Slide-out delete drawer - slides out from UNDER the card border on hover */}
                 {/* right-full: drawer is to the LEFT of the row */}
                 {/* translate-x-full: hidden state - pushed RIGHT (under the card) */}
@@ -714,6 +762,15 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
                 {/* Content wrapper - sits on top of delete drawer */}
                 <div className="relative bg-gruvbox-dark-bg-soft space-y-2 -ml-6 pl-6">
                 <div className="flex gap-2">
+                <div
+                  draggable
+                  onDragStart={(e) => handleIngredientDragStart(e, index)}
+                  className="flex items-center cursor-grab active:cursor-grabbing hover:bg-gruvbox-dark-bg-hard p-1 -m-1 rounded"
+                >
+                  <span className="text-2xl text-gruvbox-dark-gray select-none">
+                    ⋮⋮
+                  </span>
+                </div>
                   <input
                     ref={(el) => (ingredientRefs.current[index] = el)}
                     type="text"
@@ -769,18 +826,9 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
 
       {/* Instructions */}
       <div className="bg-gruvbox-dark-bg-soft p-6 rounded-lg border border-gruvbox-dark-gray mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gruvbox-dark-green-bright">
-            Instructions
-          </h2>
-          <button
-            type="button"
-            onClick={addInstruction}
-            className="px-3 py-1 bg-gruvbox-dark-green hover:bg-gruvbox-dark-green-bright rounded transition"
-          >
-            + Add
-          </button>
-        </div>
+        <h2 className="text-xl font-semibold text-gruvbox-dark-green-bright mb-4">
+          Instructions
+        </h2>
 
         {formData.instructions.length === 0 ? (
           <p className="text-gruvbox-dark-gray">No instructions yet. Click "Add" to get started.</p>
@@ -812,7 +860,12 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
                 <textarea
                   value={inst.description}
                   onChange={(e) => updateInstruction(index, 'description', e.target.value)}
-                  className="flex-1 p-2 rounded bg-gruvbox-dark-bg border border-gruvbox-dark-gray text-gruvbox-dark-fg focus:outline-none focus:border-gruvbox-dark-orange-bright resize-none overflow-hidden"
+                  onFocus={() => setActiveStepIndex(index)}
+                  className={`flex-1 p-2 rounded bg-gruvbox-dark-bg border text-gruvbox-dark-fg focus:outline-none resize-none overflow-hidden ${
+                    activeStepIndex === index
+                      ? 'border-gruvbox-dark-orange-bright'
+                      : 'border-gruvbox-dark-gray'
+                  }`}
                   placeholder="Instruction description"
                   rows="1"
                   required
@@ -832,28 +885,11 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
                   type="number"
                   value={inst.duration_minutes}
                   onChange={(e) => updateInstruction(index, 'duration_minutes', e.target.value)}
+                  onFocus={() => setActiveStepIndex(index)}
                   className="w-20 p-2 rounded bg-gruvbox-dark-bg border border-gruvbox-dark-gray text-gruvbox-dark-fg focus:outline-none focus:border-gruvbox-dark-orange-bright"
                   placeholder="min"
                   min="0"
                 />
-                <div className="flex flex-col gap-1 self-stretch">
-                  <button
-                    type="button"
-                    onClick={() => removeInstruction(index)}
-                    className="flex-1 px-3 bg-gruvbox-dark-red hover:bg-gruvbox-dark-red-bright rounded transition"
-                    title="Remove step"
-                  >
-                    ×
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => cloneInstruction(index)}
-                    className="flex-1 px-3 bg-gruvbox-dark-aqua hover:bg-gruvbox-dark-aqua-bright rounded transition"
-                    title="Insert step (splits at cursor or selection)"
-                  >
-                    ⎘
-                  </button>
-                </div>
                 </div>
               </div>
             ))}

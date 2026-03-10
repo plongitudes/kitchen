@@ -177,7 +177,7 @@ const Backup = () => {
   };
 
   return (
-    <div className={`min-h-screen p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
+    <div className={`min-h-full p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
       <div className="max-w-4xl mx-auto">
         <h1 className={`text-3xl font-bold mb-6 ${
           isDark ? 'text-gruvbox-dark-orange-bright' : 'text-gruvbox-light-orange-bright'

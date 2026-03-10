@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { mealPlanAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import { usePageActions } from '../context/MenuBarContext';
 import { formatLocalDate } from '../utils/dateUtils';
 
 const GroceryListAll = () => {
@@ -68,6 +69,16 @@ const GroceryListAll = () => {
     }
   };
 
+  usePageActions([
+    {
+      id: 'generate',
+      label: generating ? 'Generating...' : 'Generate for Today',
+      onClick: handleGenerateForToday,
+      color: 'green',
+      disabled: generating,
+    },
+  ], [generating]);
+
   if (loading) {
     return (
       <div className={`p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
@@ -91,30 +102,13 @@ const GroceryListAll = () => {
   }
 
   return (
-    <div className={`min-h-screen p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
+    <div className={`min-h-full p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className={`text-3xl font-bold ${
-            isDark ? 'text-gruvbox-dark-orange-bright' : 'text-gruvbox-light-orange-bright'
-          }`}>
-            Grocery Lists
-          </h1>
-          <button
-            onClick={handleGenerateForToday}
-            disabled={generating}
-            className={`px-4 py-2 rounded font-semibold transition ${
-              generating
-                ? isDark
-                  ? 'bg-gruvbox-dark-gray cursor-not-allowed'
-                  : 'bg-gruvbox-light-gray cursor-not-allowed'
-                : isDark
-                  ? 'bg-gruvbox-dark-green hover:bg-gruvbox-dark-green-bright'
-                  : 'bg-gruvbox-light-green hover:bg-gruvbox-light-green-bright'
-            }`}
-          >
-            {generating ? 'Generating...' : 'Generate for Today'}
-          </button>
-        </div>
+        <h1 className={`text-3xl font-bold mb-6 ${
+          isDark ? 'text-gruvbox-dark-orange-bright' : 'text-gruvbox-light-orange-bright'
+        }`}>
+          Grocery Lists
+        </h1>
 
         {groceryLists.length === 0 ? (
           <div className={`text-center p-8 border-2 border-dashed rounded ${

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { mealPlanAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import { usePageActions } from '../context/MenuBarContext';
 import { formatLocalDate, getDayName as getLocalDayName } from '../utils/dateUtils';
 
 const MealPlanDetail = () => {
@@ -39,6 +40,10 @@ const MealPlanDetail = () => {
   });
 
   const getDayName = (dateString) => getLocalDayName(dateString);
+
+  usePageActions([
+    { id: 'back', label: 'Back to History', onClick: () => navigate('/meal-plans'), color: 'gray' },
+  ], []);
 
   const groupAssignmentsByDate = (assignments) => {
     const grouped = {};
@@ -92,19 +97,10 @@ const MealPlanDetail = () => {
   const dates = Object.keys(assignmentsByDate).sort();
 
   return (
-    <div className={`min-h-screen p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
+    <div className={`min-h-full p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <button
-              onClick={() => navigate('/meal-plans')}
-              className={`mb-2 text-sm ${
-                isDark ? 'text-gruvbox-dark-blue hover:text-gruvbox-dark-blue-bright'
-                : 'text-gruvbox-light-blue hover:text-gruvbox-light-blue-bright'
-              }`}
-            >
-              ← Back to History
-            </button>
             <h1 className={`text-3xl font-bold ${
               isDark ? 'text-gruvbox-dark-orange-bright' : 'text-gruvbox-light-orange-bright'
             }`}>

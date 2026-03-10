@@ -45,3 +45,13 @@ global.localStorage = localStorageMock;
 
 // Mock Element.scrollIntoView
 Element.prototype.scrollIntoView = () => {};
+
+// Mock IntersectionObserver (jsdom doesn't support it)
+class MockIntersectionObserver {
+  constructor() {
+    this.observe = () => {};
+    this.unobserve = () => {};
+    this.disconnect = () => {};
+  }
+}
+global.IntersectionObserver = MockIntersectionObserver;

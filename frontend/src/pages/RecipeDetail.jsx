@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { recipeAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import { usePageActions } from '../context/MenuBarContext';
 import RetireRecipeModal from '../components/RetireRecipeModal';
 import Toast from '../components/Toast';
 
@@ -48,26 +49,6 @@ const RecipeDetail = () => {
     }
   };
 
-  const handleExportJSON = async () => {
-    try {
-      const response = await recipeAPI.get(`${id}/export`, { responseType: 'blob' });
-
-      // Create download link
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `${recipe.name}.json`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      setToast({
-        message: 'Failed to export recipe',
-        type: 'error',
-      });
-    }
-  };
 
   const handleReimportConfirm = async () => {
     try {
@@ -89,6 +70,34 @@ const RecipeDetail = () => {
       setReimporting(false);
     }
   };
+
+  // Register page actions
+  usePageActions([
+    { id: 'back', label: 'Index', to: '/recipes', color: 'gray' },
+    { id: 'edit', label: 'Edit', to: `/recipes/${id}/edit`, color: 'purple' },
+    {
+      id: 'view-original',
+      label: 'View Original',
+      variant: 'link',
+      href: recipe?.source_url,
+      color: 'blue',
+      hidden: !recipe?.source_url,
+    },
+    {
+      id: 'reimport',
+      label: 'Re-import',
+      onClick: () => setReimportModal(true),
+      color: 'aqua',
+      hidden: !(recipe?.source_url && !recipe?.retired_at),
+    },
+    {
+      id: 'retire',
+      label: 'Retire',
+      onClick: () => setRetireModal(true),
+      color: 'red',
+      hidden: !recipe || !!recipe.retired_at,
+    },
+  ], [recipe, id]);
 
   if (loading) {
     return (
@@ -116,87 +125,13 @@ const RecipeDetail = () => {
 
   return (
     <div className={`p-8 max-w-4xl mx-auto ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
-      {/* Header with Action Buttons */}
+      {/* Header */}
       <div className="mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className={`text-3xl font-bold ${
-            isDark ? 'text-gruvbox-dark-orange-bright' : 'text-gruvbox-light-orange-bright'
-          }`}>
-            {recipe.name}
-          </h1>
-        </div>
-
-        {/* Action Buttons Row */}
-        <div className="flex gap-2 mb-4 flex-wrap">
-          <Link
-            to="/recipes"
-            className={`px-4 py-2 rounded transition ${
-              isDark
-                ? 'bg-gruvbox-dark-gray hover:bg-gruvbox-dark-fg-0'
-                : 'bg-gruvbox-light-gray hover:bg-gruvbox-light-fg-0'
-            }`}
-          >
-            ← Back to Recipes
-          </Link>
-          <Link
-            to={`/recipes/${id}/edit`}
-            className={`px-4 py-2 rounded transition ${
-              isDark
-                ? 'bg-gruvbox-dark-purple hover:bg-gruvbox-dark-purple-bright'
-                : 'bg-gruvbox-light-purple hover:bg-gruvbox-light-purple-bright'
-            }`}
-          >
-            Edit
-          </Link>
-          {recipe.source_url && (
-            <a
-              href={recipe.source_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`px-4 py-2 rounded transition ${
-                isDark
-                  ? 'bg-gruvbox-dark-blue hover:bg-gruvbox-dark-blue-bright'
-                  : 'bg-gruvbox-light-blue hover:bg-gruvbox-light-blue-bright'
-              }`}
-            >
-              View Original →
-            </a>
-          )}
-          {recipe.source_url && !recipe.retired_at && (
-            <button
-              onClick={() => setReimportModal(true)}
-              className={`px-4 py-2 rounded transition ${
-                isDark
-                  ? 'bg-gruvbox-dark-aqua hover:bg-gruvbox-dark-aqua-bright text-gruvbox-dark-bg'
-                  : 'bg-gruvbox-light-aqua hover:bg-gruvbox-light-aqua-bright text-gruvbox-light-bg'
-              }`}
-            >
-              Re-import from Source
-            </button>
-          )}
-          <button
-            onClick={handleExportJSON}
-            className={`px-4 py-2 rounded transition ${
-              isDark
-                ? 'bg-gruvbox-dark-blue hover:bg-gruvbox-dark-blue-bright'
-                : 'bg-gruvbox-light-blue hover:bg-gruvbox-light-blue-bright'
-            }`}
-          >
-            Export JSON
-          </button>
-          {!recipe.retired_at && (
-            <button
-              onClick={() => setRetireModal(true)}
-              className={`px-4 py-2 rounded transition ${
-                isDark
-                  ? 'bg-gruvbox-dark-red hover:bg-gruvbox-dark-red-bright'
-                  : 'bg-gruvbox-light-red hover:bg-gruvbox-light-red-bright'
-              }`}
-            >
-              Retire
-            </button>
-          )}
-        </div>
+        <h1 className={`text-3xl font-bold mb-4 ${
+          isDark ? 'text-gruvbox-dark-orange-bright' : 'text-gruvbox-light-orange-bright'
+        }`}>
+          {recipe.name}
+        </h1>
 
         {/* Dish Type and Description */}
         {recipe.dish_type && (

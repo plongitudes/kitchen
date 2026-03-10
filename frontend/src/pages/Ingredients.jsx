@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { usePageActions } from '../context/MenuBarContext';
 import { ingredientAPI } from '../services/api';
 import { INGREDIENT_CATEGORIES } from '../config/ingredients';
 import IngredientDetail from '../components/IngredientDetail';
@@ -29,7 +30,7 @@ const Ingredients = () => {
   const [autoMapping, setAutoMapping] = useState(false);
   const [toast, setToast] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null);
-  const [showUnused, setShowUnused] = useState(false);
+  const [usageFilter, setUsageFilter] = useState('used');
 
   const categories = [...INGREDIENT_CATEGORIES, 'uncategorized'];
 
@@ -133,6 +134,17 @@ const Ingredients = () => {
     });
   };
 
+  usePageActions([
+    {
+      id: 'automap',
+      label: autoMapping ? 'Auto-mapping...' : 'Auto-map Common (2+)',
+      onClick: handleAutoMap,
+      color: 'green',
+      disabled: autoMapping,
+      hidden: !(activeTab === 'unmapped' && unmappedIngredients.length > 0),
+    },
+  ], [activeTab, unmappedIngredients.length, autoMapping]);
+
   if (selectedIngredient) {
     return (
       <IngredientDetail
@@ -144,7 +156,7 @@ const Ingredients = () => {
   }
 
   return (
-    <div className={`min-h-screen p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
+    <div className={`min-h-full p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -168,7 +180,7 @@ const Ingredients = () => {
                 : `border-transparent ${isDark ? 'text-gruvbox-dark-gray hover:text-gruvbox-dark-fg' : 'text-gruvbox-light-gray hover:text-gruvbox-light-fg'}`
             }`}
           >
-            All Ingredients ({showUnused ? ingredients.length : ingredients.filter(i => i.recipe_count > 0).length})
+            All Ingredients ({usageFilter === 'all' ? ingredients.length : usageFilter === 'unused' ? ingredients.filter(i => i.recipe_count === 0).length : ingredients.filter(i => i.recipe_count > 0).length})
           </button>
           <button
             onClick={() => setActiveTab('unmapped')}
@@ -200,18 +212,27 @@ const Ingredients = () => {
                   }`}
                 />
 
-                {/* Toggle for showing unused ingredients */}
-                <label className="flex items-center gap-2 cursor-pointer whitespace-nowrap">
-                  <input
-                    type="checkbox"
-                    checked={showUnused}
-                    onChange={(e) => setShowUnused(e.target.checked)}
-                    className="w-4 h-4 cursor-pointer"
-                  />
-                  <span className={`text-sm ${isDark ? 'text-gruvbox-dark-fg' : 'text-gruvbox-light-fg'}`}>
-                    Show unused
-                  </span>
-                </label>
+                {/* Usage filter toggle */}
+                <div className={`flex rounded overflow-hidden border ${isDark ? 'border-gruvbox-dark-gray' : 'border-gruvbox-light-gray'}`}>
+                  {[
+                    { value: 'used', label: 'Used' },
+                    { value: 'unused', label: 'Unused' },
+                    { value: 'all', label: 'All' },
+                  ].map(({ value, label }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setUsageFilter(value)}
+                      className={`px-3 py-1 text-sm transition ${
+                        usageFilter === value
+                          ? `${isDark ? 'bg-gruvbox-dark-orange text-gruvbox-dark-bg' : 'bg-gruvbox-light-orange text-gruvbox-light-bg'}`
+                          : `${isDark ? 'bg-gruvbox-dark-bg-soft text-gruvbox-dark-gray hover:text-gruvbox-dark-fg' : 'bg-gruvbox-light-bg-soft text-gruvbox-light-gray hover:text-gruvbox-light-fg'}`
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Category filters */}
@@ -244,12 +265,14 @@ const Ingredients = () => {
                 {error}
               </div>
             ) : (() => {
-              const filteredIngredients = ingredients.filter(ingredient => showUnused || ingredient.recipe_count > 0);
+              const filteredIngredients = ingredients.filter(ingredient =>
+                usageFilter === 'all' ? true : usageFilter === 'unused' ? ingredient.recipe_count === 0 : ingredient.recipe_count > 0
+              );
               return filteredIngredients.length === 0 ? (
                 <div className={`text-center py-8 border-2 border-dashed rounded ${
                   isDark ? 'border-gruvbox-dark-gray text-gruvbox-dark-gray' : 'border-gruvbox-light-gray text-gruvbox-light-gray'
                 }`}>
-                  {ingredients.length === 0 ? 'No ingredients found' : 'No used ingredients found. Toggle "Show unused" to see all ingredients.'}
+                  {ingredients.length === 0 ? 'No ingredients found' : `No ${usageFilter === 'unused' ? 'unused' : 'used'} ingredients found.`}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -316,21 +339,6 @@ const Ingredients = () => {
         {/* Unmapped Ingredients Tab */}
         {activeTab === 'unmapped' && (
           <div className="space-y-4">
-            {unmappedIngredients.length > 0 && (
-              <div className="flex justify-end">
-                <button
-                  onClick={handleAutoMap}
-                  disabled={autoMapping}
-                  className={`px-4 py-2 rounded transition ${
-                    autoMapping
-                      ? `${isDark ? 'bg-gruvbox-dark-bg-hard text-gruvbox-dark-gray' : 'bg-gruvbox-light-bg-hard text-gruvbox-light-gray'} cursor-not-allowed`
-                      : `${isDark ? 'bg-gruvbox-dark-green hover:bg-gruvbox-dark-green-bright text-gruvbox-dark-bg' : 'bg-gruvbox-light-green hover:bg-gruvbox-light-green-bright text-gruvbox-light-bg'}`
-                  }`}
-                >
-                  {autoMapping ? 'Auto-mapping...' : 'Auto-map Common Ingredients (2+ recipes)'}
-                </button>
-              </div>
-            )}
             {unmappedIngredients.length === 0 ? (
               <div className={`text-center py-8 border-2 border-dashed rounded ${
                 isDark ? 'border-gruvbox-dark-gray text-gruvbox-dark-gray' : 'border-gruvbox-light-gray text-gruvbox-light-gray'

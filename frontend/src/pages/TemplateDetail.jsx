@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { templateAPI, authAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import { usePageActions } from '../context/MenuBarContext';
 import Toast from '../components/Toast';
 import ConfirmDialog from '../components/ConfirmDialog';
 
@@ -100,6 +101,32 @@ const TemplateDetail = () => {
       .sort((a, b) => a.order - b.order);
   };
 
+  // Register page actions
+  usePageActions([
+    {
+      id: 'edit',
+      label: 'Edit',
+      to: `/templates/${id}/edit`,
+      color: 'purple',
+      hidden: !template || !!template.retired_at,
+    },
+    {
+      id: 'fork',
+      label: 'Fork Template',
+      onClick: () => setShowForkModal(true),
+      color: 'blue',
+      hidden: !template || !!template.retired_at,
+    },
+    {
+      id: 'retire',
+      label: retiring ? 'Retiring...' : 'Retire',
+      onClick: handleRetire,
+      color: 'red',
+      disabled: retiring,
+      hidden: !template || !!template.retired_at,
+    },
+  ], [template, id, retiring]);
+
   if (loading) {
     return (
       <div className="p-8">
@@ -123,66 +150,28 @@ const TemplateDetail = () => {
   }
 
   return (
-    <div className={`min-h-screen p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
+    <div className={`min-h-full p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-start mb-6">
-          <div>
-            <h1 className={`text-3xl font-bold mb-2 ${
-              isDark ? 'text-gruvbox-dark-orange-bright' : 'text-gruvbox-light-orange-bright'
-            }`}>
-              {template.name}
-              {template.retired_at && (
-                <span className={`ml-3 text-lg ${
-                  isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'
-                }`}>
-                  (Retired)
-                </span>
-              )}
-            </h1>
-            <div className={`text-sm ${isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'}`}>
-              Created: {new Date(template.created_at).toLocaleDateString()}
-              {template.retired_at && (
-                <> • Retired: {new Date(template.retired_at).toLocaleDateString()}</>
-              )}
-            </div>
+        <div className="mb-6">
+          <h1 className={`text-3xl font-bold mb-2 ${
+            isDark ? 'text-gruvbox-dark-orange-bright' : 'text-gruvbox-light-orange-bright'
+          }`}>
+            {template.name}
+            {template.retired_at && (
+              <span className={`ml-3 text-lg ${
+                isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'
+              }`}>
+                (Retired)
+              </span>
+            )}
+          </h1>
+          <div className={`text-sm ${isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'}`}>
+            Created: {new Date(template.created_at).toLocaleDateString()}
+            {template.retired_at && (
+              <> • Retired: {new Date(template.retired_at).toLocaleDateString()}</>
+            )}
           </div>
-
-          {!template.retired_at && (
-            <div className="flex gap-2">
-              <Link
-                to={`/templates/${id}/edit`}
-                className={`px-4 py-2 rounded transition ${
-                  isDark
-                    ? 'bg-gruvbox-dark-purple hover:bg-gruvbox-dark-purple-bright text-gruvbox-dark-bg'
-                    : 'bg-gruvbox-light-purple hover:bg-gruvbox-light-purple-bright text-gruvbox-light-bg'
-                }`}
-              >
-                Edit
-              </Link>
-              <button
-                onClick={() => setShowForkModal(true)}
-                className={`px-4 py-2 rounded transition ${
-                  isDark
-                    ? 'bg-gruvbox-dark-blue hover:bg-gruvbox-dark-blue-bright text-gruvbox-dark-bg'
-                    : 'bg-gruvbox-light-blue hover:bg-gruvbox-light-blue-bright text-gruvbox-light-bg'
-                }`}
-              >
-                Fork Template
-              </button>
-              <button
-                onClick={handleRetire}
-                disabled={retiring}
-                className={`px-4 py-2 rounded transition ${
-                  isDark
-                    ? 'bg-gruvbox-dark-red hover:bg-gruvbox-dark-red-bright text-gruvbox-dark-bg disabled:opacity-50'
-                    : 'bg-gruvbox-light-red hover:bg-gruvbox-light-red-bright text-gruvbox-light-bg disabled:opacity-50'
-                }`}
-              >
-                {retiring ? 'Retiring...' : 'Retire'}
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Day Assignments */}
@@ -266,17 +255,6 @@ const TemplateDetail = () => {
           })}
         </div>
 
-        {/* Back Button */}
-        <div className="mt-8">
-          <Link
-            to="/templates"
-            className={`hover:underline ${
-              isDark ? 'text-gruvbox-dark-blue-bright' : 'text-gruvbox-light-blue-bright'
-            }`}
-          >
-            ← Back to Templates
-          </Link>
-        </div>
       </div>
 
       {/* Fork Modal */}

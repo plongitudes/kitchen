@@ -3,6 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../utils/test-utils';
 import RecipeForm from '../../../components/RecipeForm';
+import MenuBar from '../../../components/MenuBar';
 import { recipeAPI } from '../../../services/api';
 
 // Mock the API
@@ -18,7 +19,7 @@ vi.mock('../../../services/api', () => ({
 
 // Mock useLocation and useNavigate
 const mockNavigate = vi.fn();
-const mockLocation = { state: null };
+const mockLocation = { state: null, pathname: '/recipes/new' };
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
@@ -72,31 +73,39 @@ const recipeWithPrepSteps = {
   ],
 };
 
+// Render RecipeForm with MenuBar so page/section actions are visible
+const renderForm = (props = {}) => {
+  return renderWithProviders(
+    <>
+      <MenuBar />
+      <RecipeForm {...props} />
+    </>
+  );
+};
+
 describe('RecipeForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockLocation.state = null;
+    mockLocation.pathname = '/recipes/new';
   });
 
   // ── Rendering ──
 
   describe('Rendering', () => {
-    it('shows "New Recipe" heading when no recipeId', () => {
-      renderWithProviders(<RecipeForm />);
+    it('shows "New Recipe" page name in menu bar', () => {
+      renderForm();
       expect(screen.getByText('New Recipe')).toBeInTheDocument();
     });
 
-    it('shows "Edit Recipe" heading when recipeId is provided', () => {
-      renderWithProviders(
-        <RecipeForm recipeId="recipe-123" initialData={validRecipeData} />
-      );
+    it('shows "Edit Recipe" page name when editing', () => {
+      mockLocation.pathname = '/recipes/recipe-123/edit';
+      renderForm({ recipeId: 'recipe-123', initialData: validRecipeData });
       expect(screen.getByText('Edit Recipe')).toBeInTheDocument();
     });
 
     it('populates form fields from initialData', () => {
-      renderWithProviders(
-        <RecipeForm recipeId="recipe-123" initialData={validRecipeData} />
-      );
+      renderForm({ recipeId: 'recipe-123', initialData: validRecipeData });
       expect(screen.getByDisplayValue('Test Recipe')).toBeInTheDocument();
       expect(screen.getByDisplayValue('A test recipe')).toBeInTheDocument();
       expect(screen.getByDisplayValue('15')).toBeInTheDocument();
@@ -104,35 +113,31 @@ describe('RecipeForm', () => {
     });
 
     it('shows empty ingredient/instruction messages when none exist', () => {
-      renderWithProviders(<RecipeForm />);
+      renderForm();
       expect(screen.getByText(/no ingredients yet/i)).toBeInTheDocument();
       expect(screen.getByText(/no instructions yet/i)).toBeInTheDocument();
     });
 
-    it('shows Re-import button only when editing with source_url', () => {
-      renderWithProviders(
-        <RecipeForm recipeId="recipe-123" initialData={validRecipeData} />
-      );
-      expect(screen.getByText(/re-import from source/i)).toBeInTheDocument();
+    it('shows Re-import button in menu bar when editing with source_url', () => {
+      mockLocation.pathname = '/recipes/recipe-123/edit';
+      renderForm({ recipeId: 'recipe-123', initialData: validRecipeData });
+      expect(screen.getByText(/re-import/i)).toBeInTheDocument();
     });
 
     it('hides Re-import button for new recipe', () => {
-      renderWithProviders(<RecipeForm />);
-      expect(screen.queryByText(/re-import from source/i)).not.toBeInTheDocument();
+      renderForm();
+      expect(screen.queryByText(/re-import/i)).not.toBeInTheDocument();
     });
   });
 
   // ── Ingredient CRUD ──
 
   describe('Ingredient CRUD', () => {
-    it('adds an ingredient row when clicking + Add', async () => {
+    it('adds an ingredient row when clicking + Ingredient in menu bar', async () => {
       const user = userEvent.setup();
-      renderWithProviders(<RecipeForm />);
+      renderForm();
 
-      // Find the Ingredients section's Add button
-      const ingredientSection = screen.getByText('Ingredients').closest('div');
-      const addButton = within(ingredientSection).getByText('+ Add');
-      await user.click(addButton);
+      await user.click(screen.getByText('+ Ingredient'));
 
       expect(screen.getByPlaceholderText('Ingredient name')).toBeInTheDocument();
       expect(screen.getByPlaceholderText('Qty')).toBeInTheDocument();
@@ -140,9 +145,7 @@ describe('RecipeForm', () => {
 
     it('removes an ingredient row', async () => {
       const user = userEvent.setup();
-      renderWithProviders(
-        <RecipeForm recipeId="recipe-123" initialData={validRecipeData} />
-      );
+      renderForm({ recipeId: 'recipe-123', initialData: validRecipeData });
 
       // Should have 2 ingredients initially
       const removeButtons = screen.getAllByTitle('Remove ingredient');
@@ -155,9 +158,7 @@ describe('RecipeForm', () => {
 
     it('updates ingredient name', async () => {
       const user = userEvent.setup();
-      renderWithProviders(
-        <RecipeForm recipeId="recipe-123" initialData={validRecipeData} />
-      );
+      renderForm({ recipeId: 'recipe-123', initialData: validRecipeData });
 
       const flourInput = screen.getByDisplayValue('flour');
       await user.clear(flourInput);
@@ -172,28 +173,24 @@ describe('RecipeForm', () => {
   describe('Instruction CRUD', () => {
     it('adds an instruction row', async () => {
       const user = userEvent.setup();
-      renderWithProviders(<RecipeForm />);
+      renderForm();
 
-      const instructionSection = screen.getByText('Instructions').closest('div');
-      const addButton = within(instructionSection).getByText('+ Add');
-      await user.click(addButton);
+      await user.click(screen.getByText('+ Instruction'));
 
       expect(screen.getByPlaceholderText('Instruction description')).toBeInTheDocument();
     });
 
     it('removes an instruction and renumbers remaining', async () => {
       const user = userEvent.setup();
-      renderWithProviders(
-        <RecipeForm recipeId="recipe-123" initialData={validRecipeData} />
-      );
+      renderForm({ recipeId: 'recipe-123', initialData: validRecipeData });
 
       // Should have 2 instructions: "1." and "2."
       expect(screen.getByText('1.')).toBeInTheDocument();
       expect(screen.getByText('2.')).toBeInTheDocument();
 
-      // Remove the first instruction (× buttons in instruction area)
-      const removeButtons = screen.getAllByTitle('Remove step');
-      await user.click(removeButtons[0]);
+      // Focus the first instruction to activate menu bar buttons
+      await user.click(screen.getByDisplayValue('Mix ingredients'));
+      await user.click(screen.getByText('Remove Step'));
 
       // Remaining instruction should now be "1."
       expect(screen.getByText('1.')).toBeInTheDocument();
@@ -203,12 +200,11 @@ describe('RecipeForm', () => {
 
     it('clones an instruction via the split button', async () => {
       const user = userEvent.setup();
-      renderWithProviders(
-        <RecipeForm recipeId="recipe-123" initialData={validRecipeData} />
-      );
+      renderForm({ recipeId: 'recipe-123', initialData: validRecipeData });
 
-      const splitButtons = screen.getAllByTitle(/insert step/i);
-      await user.click(splitButtons[0]);
+      // Focus the first instruction to activate menu bar buttons
+      await user.click(screen.getByDisplayValue('Mix ingredients'));
+      await user.click(screen.getByText('Split Step'));
 
       // Should now have 3 instructions
       expect(screen.getByText('3.')).toBeInTheDocument();
@@ -221,7 +217,7 @@ describe('RecipeForm', () => {
     it('calls recipeAPI.create for new recipe', async () => {
       recipeAPI.create.mockResolvedValue({ data: { id: 'new-123' } });
       const user = userEvent.setup();
-      renderWithProviders(<RecipeForm />);
+      renderForm();
 
       // Name is the first text input in the form
       const allInputs = screen.getAllByRole('textbox');
@@ -238,11 +234,10 @@ describe('RecipeForm', () => {
     it('calls recipeAPI.update for existing recipe', async () => {
       recipeAPI.update.mockResolvedValue({ data: validRecipeData });
       const user = userEvent.setup();
-      renderWithProviders(
-        <RecipeForm recipeId="recipe-123" initialData={validRecipeData} />
-      );
+      mockLocation.pathname = '/recipes/recipe-123/edit';
+      renderForm({ recipeId: 'recipe-123', initialData: validRecipeData });
 
-      await user.click(screen.getByText('Update Recipe'));
+      await user.click(screen.getByText('Save'));
 
       await waitFor(() => {
         expect(recipeAPI.update).toHaveBeenCalledWith('recipe-123', expect.any(Object));
@@ -258,11 +253,10 @@ describe('RecipeForm', () => {
           { id: 'ing-1', ingredient_name: 'flour', quantity: 0, unit: 'cup', order: 0 },
         ],
       };
-      renderWithProviders(
-        <RecipeForm recipeId="recipe-123" initialData={dataWithBadIngredient} />
-      );
+      mockLocation.pathname = '/recipes/recipe-123/edit';
+      renderForm({ recipeId: 'recipe-123', initialData: dataWithBadIngredient });
 
-      await user.click(screen.getByText('Update Recipe'));
+      await user.click(screen.getByText('Save'));
 
       await waitFor(() => {
         expect(screen.getByText(/quantity is required when unit is specified/i)).toBeInTheDocument();
@@ -275,11 +269,10 @@ describe('RecipeForm', () => {
         response: { data: { detail: 'Recipe name already exists' } }
       });
       const user = userEvent.setup();
-      renderWithProviders(
-        <RecipeForm recipeId="recipe-123" initialData={validRecipeData} />
-      );
+      mockLocation.pathname = '/recipes/recipe-123/edit';
+      renderForm({ recipeId: 'recipe-123', initialData: validRecipeData });
 
-      await user.click(screen.getByText('Update Recipe'));
+      await user.click(screen.getByText('Save'));
 
       await waitFor(() => {
         expect(screen.getByText('Recipe name already exists')).toBeInTheDocument();
@@ -292,13 +285,12 @@ describe('RecipeForm', () => {
   describe('Navigation State', () => {
     it('navigates to returnTo location after updating recipe', async () => {
       mockLocation.state = { returnTo: '/ingredients', tab: 'unmapped' };
+      mockLocation.pathname = '/recipes/recipe-123/edit';
       recipeAPI.update.mockResolvedValue({ data: validRecipeData });
       const user = userEvent.setup();
 
-      renderWithProviders(
-        <RecipeForm recipeId="recipe-123" initialData={validRecipeData} />
-      );
-      await user.click(screen.getByText(/update recipe/i));
+      renderForm({ recipeId: 'recipe-123', initialData: validRecipeData });
+      await user.click(screen.getByText(/^save$/i));
 
       await waitFor(() => {
         expect(mockNavigate).toHaveBeenCalledWith('/ingredients', {
@@ -310,11 +302,10 @@ describe('RecipeForm', () => {
     it('falls back to /recipes when no returnTo state', async () => {
       recipeAPI.update.mockResolvedValue({ data: validRecipeData });
       const user = userEvent.setup();
+      mockLocation.pathname = '/recipes/recipe-123/edit';
 
-      renderWithProviders(
-        <RecipeForm recipeId="recipe-123" initialData={validRecipeData} />
-      );
-      await user.click(screen.getByText(/update recipe/i));
+      renderForm({ recipeId: 'recipe-123', initialData: validRecipeData });
+      await user.click(screen.getByText(/^save$/i));
 
       await waitFor(() => {
         expect(mockNavigate).toHaveBeenCalledWith('/recipes');
@@ -325,9 +316,7 @@ describe('RecipeForm', () => {
       mockLocation.state = { returnTo: '/ingredients', tab: 'unmapped' };
       const user = userEvent.setup();
 
-      renderWithProviders(
-        <RecipeForm recipeId="recipe-123" initialData={validRecipeData} />
-      );
+      renderForm({ recipeId: 'recipe-123', initialData: validRecipeData });
       await user.click(screen.getByText(/^cancel$/i));
 
       expect(mockNavigate).toHaveBeenCalledWith('/ingredients', {
@@ -338,9 +327,7 @@ describe('RecipeForm', () => {
     it('cancel button falls back to /recipes', async () => {
       const user = userEvent.setup();
 
-      renderWithProviders(
-        <RecipeForm recipeId="recipe-123" initialData={validRecipeData} />
-      );
+      renderForm({ recipeId: 'recipe-123', initialData: validRecipeData });
       await user.click(screen.getByText(/^cancel$/i));
 
       expect(mockNavigate).toHaveBeenCalledWith('/recipes');
@@ -351,9 +338,7 @@ describe('RecipeForm', () => {
 
   describe('Prep Step Linking', () => {
     it('hydrates ingredient prep_step_description from linked prep steps', () => {
-      renderWithProviders(
-        <RecipeForm recipeId="recipe-123" initialData={recipeWithPrepSteps} />
-      );
+      renderForm({ recipeId: 'recipe-123', initialData: recipeWithPrepSteps });
 
       // Onion and carrot should both show "Dice finely" in their prep step fields
       const diceFields = screen.getAllByDisplayValue('Dice finely');
@@ -361,9 +346,7 @@ describe('RecipeForm', () => {
     });
 
     it('shows link icon for linked ingredients', () => {
-      renderWithProviders(
-        <RecipeForm recipeId="recipe-123" initialData={recipeWithPrepSteps} />
-      );
+      renderForm({ recipeId: 'recipe-123', initialData: recipeWithPrepSteps });
 
       // Linked ingredients show the 🔗 icon
       const linkIcons = screen.getAllByText('🔗');
@@ -371,18 +354,14 @@ describe('RecipeForm', () => {
     });
 
     it('shows edit button for linked ingredients', () => {
-      renderWithProviders(
-        <RecipeForm recipeId="recipe-123" initialData={recipeWithPrepSteps} />
-      );
+      renderForm({ recipeId: 'recipe-123', initialData: recipeWithPrepSteps });
 
       const editButtons = screen.getAllByTitle('Edit prep step');
       expect(editButtons).toHaveLength(2); // onion and carrot are linked
     });
 
     it('shows clear (✕) button on linked prep step fields', () => {
-      renderWithProviders(
-        <RecipeForm recipeId="recipe-123" initialData={recipeWithPrepSteps} />
-      );
+      renderForm({ recipeId: 'recipe-123', initialData: recipeWithPrepSteps });
 
       // The ✕ clear buttons inside prep step inputs for linked ingredients
       const clearButtons = screen.getAllByText('✕');
@@ -395,11 +374,10 @@ describe('RecipeForm', () => {
   describe('Re-import', () => {
     it('opens confirmation modal when clicking Re-import', async () => {
       const user = userEvent.setup();
-      renderWithProviders(
-        <RecipeForm recipeId="recipe-123" initialData={validRecipeData} />
-      );
+      mockLocation.pathname = '/recipes/recipe-123/edit';
+      renderForm({ recipeId: 'recipe-123', initialData: validRecipeData });
 
-      await user.click(screen.getByText(/re-import from source/i));
+      await user.click(screen.getByText(/re-import/i));
 
       expect(screen.getByText(/re-import recipe from source\?/i)).toBeInTheDocument();
       expect(screen.getByText(/current ingredients and instructions will be replaced/i)).toBeInTheDocument();
@@ -407,11 +385,10 @@ describe('RecipeForm', () => {
 
     it('closes modal on cancel', async () => {
       const user = userEvent.setup();
-      renderWithProviders(
-        <RecipeForm recipeId="recipe-123" initialData={validRecipeData} />
-      );
+      mockLocation.pathname = '/recipes/recipe-123/edit';
+      renderForm({ recipeId: 'recipe-123', initialData: validRecipeData });
 
-      await user.click(screen.getByText(/re-import from source/i));
+      await user.click(screen.getByText(/re-import/i));
       // The modal has its own Cancel button
       const modalCancelButtons = screen.getAllByText(/^cancel$/i);
       await user.click(modalCancelButtons[modalCancelButtons.length - 1]);
@@ -429,11 +406,10 @@ describe('RecipeForm', () => {
         }
       });
       const user = userEvent.setup();
-      renderWithProviders(
-        <RecipeForm recipeId="recipe-123" initialData={validRecipeData} />
-      );
+      mockLocation.pathname = '/recipes/recipe-123/edit';
+      renderForm({ recipeId: 'recipe-123', initialData: validRecipeData });
 
-      await user.click(screen.getByText(/re-import from source/i));
+      await user.click(screen.getByText(/re-import/i));
       await user.click(screen.getByText(/^re-import recipe$/i));
 
       await waitFor(() => {

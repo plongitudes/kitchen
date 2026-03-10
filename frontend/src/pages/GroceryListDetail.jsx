@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { mealPlanAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import { usePageActions } from '../context/MenuBarContext';
 import { formatGroceryItem } from '../utils/unitFormatter';
 import { formatLocalDate } from '../utils/dateUtils';
 
@@ -29,6 +30,10 @@ const GroceryListDetail = () => {
     loadGroceryList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  usePageActions([
+    { id: 'back', label: 'Back', to: '/grocery-lists', color: 'gray' },
+  ], []);
 
   // Use utility for date-only strings (shopping_date) to avoid UTC timezone shifts
   const formatDate = (dateString) => formatLocalDate(dateString, {
@@ -99,22 +104,10 @@ const GroceryListDetail = () => {
   const sortedCategories = Object.keys(groupedItems).sort();
 
   return (
-    <div className={`min-h-screen p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
+    <div className={`min-h-full p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <div className="flex items-center gap-4 mb-4">
-            <Link
-              to="/grocery-lists"
-              className={`px-3 py-1 rounded transition ${
-                isDark
-                  ? 'bg-gruvbox-dark-bg-soft hover:bg-gruvbox-dark-bg-hard'
-                  : 'bg-gruvbox-light-bg-soft hover:bg-gruvbox-light-bg-hard'
-              }`}
-            >
-              ← Back
-            </Link>
-          </div>
           <h1 className={`text-3xl font-bold mb-2 ${
             isDark ? 'text-gruvbox-dark-orange-bright' : 'text-gruvbox-light-orange-bright'
           }`}>

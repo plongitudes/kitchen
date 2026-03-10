@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { scheduleAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import { usePageActions } from '../context/MenuBarContext';
 
 const ScheduleNew = () => {
   const navigate = useNavigate();
@@ -17,7 +18,7 @@ const ScheduleNew = () => {
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setError(null);
     setSubmitting(true);
 
@@ -36,28 +37,20 @@ const ScheduleNew = () => {
     }
   };
 
+  usePageActions([
+    { id: 'cancel', label: 'Cancel', onClick: () => navigate('/schedules'), color: 'gray' },
+    {
+      id: 'submit',
+      label: submitting ? 'Creating...' : 'Create Sequence',
+      onClick: () => handleSubmit(),
+      color: 'green',
+      disabled: submitting,
+    },
+  ], [submitting]);
+
   return (
-    <div className={`min-h-screen p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
+    <div className={`min-h-full p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
       <div className="max-w-3xl mx-auto">
-        <div className="mb-6">
-          <div className="flex items-center gap-4 mb-4">
-            <button
-              onClick={() => navigate('/schedules')}
-              className={`px-3 py-1 rounded transition ${
-                isDark
-                  ? 'bg-gruvbox-dark-bg-soft hover:bg-gruvbox-dark-bg-hard'
-                  : 'bg-gruvbox-light-bg-soft hover:bg-gruvbox-light-bg-hard'
-              }`}
-            >
-              ← Back
-            </button>
-            <h1 className={`text-3xl font-bold ${
-              isDark ? 'text-gruvbox-dark-orange-bright' : 'text-gruvbox-light-orange-bright'
-            }`}>
-              Create Schedule Sequence
-            </h1>
-          </div>
-        </div>
 
         {error && (
           <div className={`mb-4 p-4 rounded ${
@@ -148,35 +141,6 @@ const ScheduleNew = () => {
             </p>
           </div>
 
-          {/* Actions */}
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => navigate('/schedules')}
-              className={`px-4 py-2 rounded transition ${
-                isDark
-                  ? 'bg-gruvbox-dark-bg hover:bg-gruvbox-dark-bg-hard'
-                  : 'bg-gruvbox-light-bg hover:bg-gruvbox-light-bg-hard'
-              }`}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className={`px-4 py-2 rounded transition ${
-                submitting
-                  ? isDark
-                    ? 'bg-gruvbox-dark-gray cursor-not-allowed'
-                    : 'bg-gruvbox-light-gray cursor-not-allowed'
-                  : isDark
-                    ? 'bg-gruvbox-dark-green hover:bg-gruvbox-dark-green-bright'
-                    : 'bg-gruvbox-light-green hover:bg-gruvbox-light-green-bright'
-              }`}
-            >
-              {submitting ? 'Creating...' : 'Create Sequence'}
-            </button>
-          </div>
         </form>
       </div>
     </div>

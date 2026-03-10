@@ -226,7 +226,7 @@ const MealPlanCurrent = () => {
   const sortedDates = Object.keys(assignmentsByDate).sort();
 
   return (
-    <div className={`min-h-screen p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
+    <div className={`min-h-full p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-6">

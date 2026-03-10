@@ -2,6 +2,7 @@ import { render } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from '../../context/AuthContext';
 import { ThemeProvider } from '../../context/ThemeContext';
+import { MenuBarProvider } from '../../context/MenuBarContext';
 
 /**
  * Custom render function that wraps components with all necessary providers
@@ -19,7 +20,9 @@ export function renderWithProviders(
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
-          {children}
+          <MenuBarProvider>
+            {children}
+          </MenuBarProvider>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { templateAPI, recipeAPI, authAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { usePageActions } from '../context/MenuBarContext';
 
 const TemplateNew = () => {
   const navigate = useNavigate();
@@ -79,7 +80,7 @@ const TemplateNew = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setError(null);
     setSubmitting(true);
 
@@ -118,6 +119,17 @@ const TemplateNew = () => {
     }
   };
 
+  usePageActions([
+    {
+      id: 'create',
+      label: submitting ? 'Creating...' : 'Create Template',
+      onClick: () => handleSubmit(),
+      color: 'green',
+      disabled: submitting || !name,
+    },
+    { id: 'cancel', label: 'Cancel', onClick: () => navigate('/templates'), color: 'gray' },
+  ], [submitting, name]);
+
   if (loading) {
     return (
       <div className="p-8">
@@ -129,7 +141,7 @@ const TemplateNew = () => {
   }
 
   return (
-    <div className={`min-h-screen p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
+    <div className={`min-h-full p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
       <div className="max-w-4xl mx-auto">
         <h1 className={`text-3xl font-bold mb-6 ${
           isDark ? 'text-gruvbox-dark-orange-bright' : 'text-gruvbox-light-orange-bright'
@@ -261,30 +273,6 @@ const TemplateNew = () => {
             })}
           </div>
 
-          <div className="mt-6 flex gap-4">
-            <button
-              type="submit"
-              disabled={submitting || !name}
-              className={`px-6 py-2 rounded transition ${
-                isDark
-                  ? 'bg-gruvbox-dark-green hover:bg-gruvbox-dark-green-bright disabled:opacity-50 text-gruvbox-dark-bg'
-                  : 'bg-gruvbox-light-green hover:bg-gruvbox-light-green-bright disabled:opacity-50 text-gruvbox-light-bg'
-              }`}
-            >
-              {submitting ? 'Creating...' : 'Create Template'}
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/templates')}
-              className={`px-6 py-2 rounded transition ${
-                isDark
-                  ? 'bg-gruvbox-dark-gray hover:bg-gruvbox-dark-gray-bright text-gruvbox-dark-fg'
-                  : 'bg-gruvbox-light-gray hover:bg-gruvbox-light-gray-bright text-gruvbox-light-fg'
-              }`}
-            >
-              Cancel
-            </button>
-          </div>
         </form>
       </div>
     </div>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { templateAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import { usePageActions } from '../context/MenuBarContext';
 
 const TemplateList = () => {
   const { isDark } = useTheme();
@@ -33,6 +34,10 @@ const TemplateList = () => {
     template.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  usePageActions([
+    { id: 'create', label: 'Create New Template', to: '/templates/new', color: 'green' },
+  ], []);
+
   if (loading) {
     return (
       <div className="p-8">
@@ -56,25 +61,13 @@ const TemplateList = () => {
   }
 
   return (
-    <div className={`min-h-screen p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
+    <div className={`min-h-full p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className={`text-3xl font-bold ${
+        <h1 className={`text-3xl font-bold mb-6 ${
             isDark ? 'text-gruvbox-dark-orange-bright' : 'text-gruvbox-light-orange-bright'
           }`}>
             Week Templates
           </h1>
-          <Link
-            to="/templates/new"
-            className={`px-4 py-2 rounded transition ${
-              isDark
-                ? 'bg-gruvbox-dark-green hover:bg-gruvbox-dark-green-bright text-gruvbox-dark-bg'
-                : 'bg-gruvbox-light-green hover:bg-gruvbox-light-green-bright text-gruvbox-light-bg'
-            }`}
-          >
-            Create New Template
-          </Link>
-        </div>
 
         {/* Search and filter controls */}
         <div className="mb-6 flex gap-4">

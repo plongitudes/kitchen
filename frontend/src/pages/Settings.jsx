@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
+import { usePageActions } from '../context/MenuBarContext';
 import api from '../services/api';
 import ConfirmModal from '../components/ConfirmModal';
 import {
@@ -151,7 +152,7 @@ const Settings = () => {
   }, []);
 
   const handleSave = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setSaving(true);
     setError(null);
     setSuccess(null);
@@ -174,6 +175,16 @@ const Settings = () => {
       setSaving(false);
     }
   };
+
+  usePageActions([
+    {
+      id: 'save',
+      label: saving ? 'Saving...' : 'Save Settings',
+      onClick: () => handleSave(),
+      color: 'green',
+      disabled: saving,
+    },
+  ], [saving]);
 
   const handleReconnect = async () => {
     setCheckingConnection(true);
@@ -534,7 +545,7 @@ const Settings = () => {
 
   if (loading) {
     return (
-      <div className={`min-h-screen p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
+      <div className={`min-h-full p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
         <div className={`text-center ${isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'}`}>
           Loading settings...
         </div>
@@ -543,7 +554,7 @@ const Settings = () => {
   }
 
   return (
-    <div className={`min-h-screen p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
+    <div className={`min-h-full p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
       <div className="max-w-4xl mx-auto">
         <h1 className={`text-3xl font-bold mb-6 ${
           isDark ? 'text-gruvbox-dark-orange-bright' : 'text-gruvbox-light-orange-bright'
@@ -1372,24 +1383,6 @@ const Settings = () => {
             </div>
           </div>
 
-          {/* Save Button */}
-          <div className="flex gap-3">
-            <button
-              type="submit"
-              disabled={saving}
-              className={`px-6 py-3 rounded transition font-semibold ${
-                saving
-                  ? isDark
-                    ? 'bg-gruvbox-dark-gray cursor-not-allowed'
-                    : 'bg-gruvbox-light-gray cursor-not-allowed'
-                  : isDark
-                    ? 'bg-gruvbox-dark-green hover:bg-gruvbox-dark-green-bright'
-                    : 'bg-gruvbox-light-green hover:bg-gruvbox-light-green-bright'
-              }`}
-            >
-              {saving ? 'Saving...' : 'Save Settings'}
-            </button>
-          </div>
         </form>
       </div>
 

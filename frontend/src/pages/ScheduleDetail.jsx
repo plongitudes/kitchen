@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { scheduleAPI, mealPlanAPI, templateAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import { usePageActions, useSectionActions } from '../context/MenuBarContext';
 import TemplateFormModal from '../components/TemplateFormModal';
 import Toast from '../components/Toast';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -116,6 +117,29 @@ const ScheduleDetail = () => {
 
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
+  // Register page actions
+  usePageActions([
+    { id: 'back', label: 'Back', onClick: () => navigate('/schedules'), color: 'gray' },
+    {
+      id: 'start',
+      label: starting ? 'Starting...' : 'Start This Schedule',
+      onClick: () => setShowStartModal(true),
+      color: 'green',
+      disabled: starting || templates.length === 0,
+    },
+  ], [starting, templates.length]);
+
+  // Register section actions for Week Templates
+  useSectionActions('week-templates', [
+    {
+      id: 'reorder',
+      label: reordering ? 'Done Reordering' : 'Reorder',
+      onClick: () => setReordering(!reordering),
+      color: reordering ? 'orange' : 'gray',
+    },
+    { id: 'add-template', label: 'Add Template', onClick: () => setShowAddModal(true), color: 'green' },
+  ], [reordering]);
+
   if (loading) {
     return (
       <div className="p-8">
@@ -149,44 +173,15 @@ const ScheduleDetail = () => {
   }
 
   return (
-    <div className={`min-h-screen p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
+    <div className={`min-h-full p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate('/schedules')}
-                className={`px-3 py-1 rounded transition ${
-                  isDark
-                    ? 'bg-gruvbox-dark-bg-soft hover:bg-gruvbox-dark-bg-hard'
-                    : 'bg-gruvbox-light-bg-soft hover:bg-gruvbox-light-bg-hard'
-                }`}
-              >
-                ← Back
-              </button>
-              <h1 className={`text-3xl font-bold ${
-                isDark ? 'text-gruvbox-dark-orange-bright' : 'text-gruvbox-light-orange-bright'
-              }`}>
-                {schedule.name}
-              </h1>
-            </div>
-            <button
-              onClick={() => setShowStartModal(true)}
-              disabled={starting || templates.length === 0}
-              className={`px-6 py-3 rounded font-semibold transition ${
-                starting || templates.length === 0
-                  ? isDark
-                    ? 'bg-gruvbox-dark-gray cursor-not-allowed'
-                    : 'bg-gruvbox-light-gray cursor-not-allowed'
-                  : isDark
-                    ? 'bg-gruvbox-dark-green hover:bg-gruvbox-dark-green-bright'
-                    : 'bg-gruvbox-light-green hover:bg-gruvbox-light-green-bright'
-              }`}
-            >
-              {starting ? 'Starting...' : 'Start This Schedule'}
-            </button>
-          </div>
+          <h1 className={`text-3xl font-bold mb-4 ${
+            isDark ? 'text-gruvbox-dark-orange-bright' : 'text-gruvbox-light-orange-bright'
+          }`}>
+            {schedule.name}
+          </h1>
 
           <div className={`p-4 rounded border ${
             isDark
@@ -214,39 +209,11 @@ const ScheduleDetail = () => {
 
         {/* Week Templates */}
         <div className="mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className={`text-2xl font-bold ${
-              isDark ? 'text-gruvbox-dark-orange' : 'text-gruvbox-light-orange'
-            }`}>
-              Week Templates
-            </h2>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setReordering(!reordering)}
-                className={`px-4 py-2 rounded transition ${
-                  reordering
-                    ? isDark
-                      ? 'bg-gruvbox-dark-yellow text-gruvbox-dark-bg'
-                      : 'bg-gruvbox-light-yellow text-gruvbox-light-bg'
-                    : isDark
-                      ? 'bg-gruvbox-dark-bg-soft hover:bg-gruvbox-dark-bg-hard'
-                      : 'bg-gruvbox-light-bg-soft hover:bg-gruvbox-light-bg-hard'
-                }`}
-              >
-                {reordering ? 'Done Reordering' : 'Reorder Templates'}
-              </button>
-              <button
-                onClick={() => setShowAddModal(true)}
-                className={`px-4 py-2 rounded transition ${
-                  isDark
-                    ? 'bg-gruvbox-dark-green hover:bg-gruvbox-dark-green-bright text-gruvbox-dark-bg'
-                    : 'bg-gruvbox-light-green hover:bg-gruvbox-light-green-bright text-gruvbox-light-bg'
-                }`}
-              >
-                Add Template
-              </button>
-            </div>
-          </div>
+          <h2 className={`text-2xl font-bold mb-4 ${
+            isDark ? 'text-gruvbox-dark-orange' : 'text-gruvbox-light-orange'
+          }`}>
+            Week Templates
+          </h2>
 
           {templates.length === 0 ? (
             <div className={`text-center p-8 border-2 border-dashed rounded ${

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { scheduleAPI } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
+import { usePageActions } from '../context/MenuBarContext';
 import Toast from '../components/Toast';
 import ConfirmDialog from '../components/ConfirmDialog';
 
@@ -53,6 +54,10 @@ const ScheduleList = () => {
 
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
+  usePageActions([
+    { id: 'create', label: 'Create New Sequence', to: '/schedules/new', color: 'green' },
+  ], []);
+
   if (loading) {
     return (
       <div className="p-8">
@@ -76,25 +81,13 @@ const ScheduleList = () => {
   }
 
   return (
-    <div className={`min-h-screen p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
+    <div className={`min-h-full p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className={`text-3xl font-bold ${
-            isDark ? 'text-gruvbox-dark-orange-bright' : 'text-gruvbox-light-orange-bright'
-          }`}>
-            Schedule Sequences
-          </h1>
-          <Link
-            to="/schedules/new"
-            className={`px-4 py-2 rounded transition ${
-              isDark
-                ? 'bg-gruvbox-dark-green hover:bg-gruvbox-dark-green-bright'
-                : 'bg-gruvbox-light-green hover:bg-gruvbox-light-green-bright'
-            }`}
-          >
-            Create New Sequence
-          </Link>
-        </div>
+        <h1 className={`text-3xl font-bold mb-6 ${
+          isDark ? 'text-gruvbox-dark-orange-bright' : 'text-gruvbox-light-orange-bright'
+        }`}>
+          Schedule Sequences
+        </h1>
 
         {schedules.length === 0 ? (
           <div className={`text-center p-8 border-2 border-dashed rounded ${

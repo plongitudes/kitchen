@@ -97,7 +97,7 @@ const IngredientDetail = ({ ingredient, onClose, onUpdate }) => {
 
   if (loading) {
     return (
-      <div className={`min-h-screen p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
+      <div className={`min-h-full p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
         <div className={`text-center ${isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'}`}>
           Loading...
         </div>
@@ -107,7 +107,7 @@ const IngredientDetail = ({ ingredient, onClose, onUpdate }) => {
 
   if (error) {
     return (
-      <div className={`min-h-screen p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
+      <div className={`min-h-full p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
         <div className={`p-4 rounded ${
           isDark ? 'bg-gruvbox-dark-red text-gruvbox-dark-bg' : 'bg-gruvbox-light-red text-gruvbox-light-bg'
         }`}>
@@ -118,7 +118,7 @@ const IngredientDetail = ({ ingredient, onClose, onUpdate }) => {
   }
 
   return (
-    <div className={`min-h-screen p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
+    <div className={`min-h-full p-8 ${isDark ? 'bg-gruvbox-dark-bg' : 'bg-gruvbox-light-bg'}`}>
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6 flex items-start justify-between">

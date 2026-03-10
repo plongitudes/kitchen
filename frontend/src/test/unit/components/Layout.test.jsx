@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { screen, render } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import { mockUser } from '../../utils/test-utils';
 import Layout from '../../../components/Layout';
@@ -29,37 +30,71 @@ const renderLayout = () => {
 };
 
 describe('Layout Component', () => {
-  it('renders the sidebar navigation', () => {
+  it('renders the menu bar with page name', () => {
     renderLayout();
 
-    expect(screen.getByText("Roane's Kitchen")).toBeInTheDocument();
     expect(screen.getByText('Home')).toBeInTheDocument();
-    expect(screen.getByText('Recipes')).toBeInTheDocument();
-    expect(screen.getByText('Schedules')).toBeInTheDocument();
-    expect(screen.getByText('Meal Plans')).toBeInTheDocument();
-    expect(screen.getByText('Grocery Lists')).toBeInTheDocument();
   });
 
-  it('displays the logged-in username', () => {
+  it('opens app menu dropdown with navigation links', async () => {
+    const user = userEvent.setup();
     renderLayout();
 
-    expect(screen.getByText(`Logged in as: ${mockUser.username}`)).toBeInTheDocument();
+    // Click the menu button (contains ☰)
+    const menuButton = screen.getByRole('button', { name: /☰/i });
+    await user.click(menuButton);
+
+    expect(screen.getByRole('link', { name: 'Recipes' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Schedules' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Meal Plans' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Grocery Lists' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ingredients' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Settings' })).toBeInTheDocument();
   });
 
-  it('renders theme toggle button', () => {
+  it('displays username in dropdown', async () => {
+    const user = userEvent.setup();
     renderLayout();
+
+    const menuButton = screen.getByRole('button', { name: /☰/i });
+    await user.click(menuButton);
+
+    expect(screen.getByText(mockUser.username)).toBeInTheDocument();
+  });
+
+  it('renders theme toggle in dropdown', async () => {
+    const user = userEvent.setup();
+    renderLayout();
+
+    const menuButton = screen.getByRole('button', { name: /☰/i });
+    await user.click(menuButton);
 
     expect(screen.getByText(/Light Mode/i)).toBeInTheDocument();
   });
 
-  it('renders logout button', () => {
+  it('renders logout button in dropdown', async () => {
+    const user = userEvent.setup();
     renderLayout();
+
+    const menuButton = screen.getByRole('button', { name: /☰/i });
+    await user.click(menuButton);
 
     expect(screen.getByText('Logout')).toBeInTheDocument();
   });
 
-  it('renders navigation links with correct hrefs', () => {
+  it('has no sidebar', () => {
     renderLayout();
+
+    expect(screen.queryByText("Roane's Kitchen")).not.toBeInTheDocument();
+    expect(screen.queryByText(`Logged in as: ${mockUser.username}`)).not.toBeInTheDocument();
+  });
+
+  it('renders navigation links with correct hrefs in dropdown', async () => {
+    const user = userEvent.setup();
+    renderLayout();
+
+    const menuButton = screen.getByRole('button', { name: /☰/i });
+    await user.click(menuButton);
 
     const homeLink = screen.getByRole('link', { name: 'Home' });
     const recipesLink = screen.getByRole('link', { name: 'Recipes' });

@@ -3,6 +3,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../utils/test-utils';
 import RecipeList from '../../../pages/RecipeList';
+import MenuBar from '../../../components/MenuBar';
 import { recipeAPI } from '../../../services/api';
 
 // Mock the API
@@ -245,7 +246,7 @@ describe('RecipeList - Index View', () => {
   it('toggles include retired filter', async () => {
     recipeAPI.get.mockResolvedValue({ data: mockIndexData });
     const user = userEvent.setup();
-    renderWithProviders(<RecipeList />);
+    renderWithProviders(<><MenuBar /><RecipeList /></>);
 
     await waitFor(() => {
       expect(screen.getByText('Apple')).toBeInTheDocument();
