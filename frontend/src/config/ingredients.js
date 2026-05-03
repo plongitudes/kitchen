@@ -4,6 +4,7 @@ export const INGREDIENT_CATEGORIES = [
   'meat',
   'pantry',
   'pasta',
+  'breads',
   'spices',
   'seafood',
   'condiments',

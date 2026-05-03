@@ -243,35 +243,49 @@ class RecipeService:
                 detail="Recipe not found",
             )
 
-        # Update fields
+        # Update fields — use model_fields_set to distinguish "not sent"
+        # from "explicitly set to null" so nullable fields can be cleared
+        fields_set = recipe_data.model_fields_set
         if recipe_data.name is not None:
             recipe.name = recipe_data.name
-        if hasattr(recipe_data, "index_name") and recipe_data.index_name is not None:
+        if "index_name" in fields_set:
             recipe.index_name = recipe_data.index_name
-        if recipe_data.dish_type is not None:
+        if "dish_type" in fields_set:
             recipe.dish_type = recipe_data.dish_type
-        if recipe_data.prep_time_minutes is not None:
+        if "prep_time_minutes" in fields_set:
             recipe.prep_time_minutes = recipe_data.prep_time_minutes
-        if recipe_data.cook_time_minutes is not None:
+        if "cook_time_minutes" in fields_set:
             recipe.cook_time_minutes = recipe_data.cook_time_minutes
-        if recipe_data.prep_notes is not None:
+        if "prep_notes" in fields_set:
             recipe.prep_notes = recipe_data.prep_notes
-        if recipe_data.postmortem_notes is not None:
+        if "postmortem_notes" in fields_set:
             recipe.postmortem_notes = recipe_data.postmortem_notes
-        if recipe_data.source_url is not None:
+        if "source_url" in fields_set:
             recipe.source_url = recipe_data.source_url
-        if recipe_data.owner_id is not None:
+        if "owner_id" in fields_set:
             recipe.owner_id = recipe_data.owner_id
 
-        # Handle ingredients replacement if provided
+        # Handle ingredients (diff-based: update existing in place, insert new, delete missing)
         if recipe_data.ingredients is not None:
-            # Delete existing ingredients (cascade deletes prep step links)
-            for ingredient in recipe.ingredients:
-                await db.delete(ingredient)
+            existing_by_id = {ing.id: ing for ing in recipe.ingredients}
+            payload_ids = {ing.id for ing in recipe_data.ingredients if ing.id is not None}
+
+            # Reject ids that don't belong to this recipe (stale or fabricated)
+            unknown_ids = payload_ids - existing_by_id.keys()
+            if unknown_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Unknown ingredient ids for this recipe: {sorted(str(i) for i in unknown_ids)}",
+                )
+
+            # Delete existing ingredients whose ids aren't in the payload
+            # (cascade also removes their prep_step_links)
+            for ingredient_id in existing_by_id.keys() - payload_ids:
+                await db.delete(existing_by_id[ingredient_id])
             await db.flush()
 
-            # Clean up orphaned prep steps (those with no ingredient links)
-            # Using NOT EXISTS is more efficient than LEFT JOIN for this pattern
+            # Clean up orphaned prep steps (those with no remaining ingredient links).
+            # Using NOT EXISTS is more efficient than LEFT JOIN for this pattern.
             orphaned_prep_steps_query = select(RecipePrepStep).where(
                 RecipePrepStep.recipe_id == recipe.id,
                 ~exists(
@@ -281,12 +295,11 @@ class RecipeService:
                 ),
             )
             orphaned_result = await db.execute(orphaned_prep_steps_query)
-            orphaned_prep_steps = orphaned_result.scalars().all()
-            for orphan in orphaned_prep_steps:
+            for orphan in orphaned_result.scalars().all():
                 await db.delete(orphan)
             await db.flush()
 
-            # Fetch existing prep steps once to avoid N+1 queries
+            # Fetch surviving prep steps once for relinking/inserting
             existing_prep_steps_query = select(RecipePrepStep).where(
                 RecipePrepStep.recipe_id == recipe.id
             )
@@ -295,14 +308,55 @@ class RecipeService:
                 step.description: step for step in existing_prep_steps_result.scalars().all()
             }
 
-            # Add new ingredients with prep step support
+            # Apply updates and inserts in payload order
             for ing_data in recipe_data.ingredients:
-                await RecipeService.create_ingredient(
-                    db=db,
-                    recipe_id=recipe.id,
-                    ingredient_data=ing_data,
-                    prep_step_map=prep_step_map,
-                )
+                if ing_data.id is not None:
+                    existing = existing_by_id[ing_data.id]
+                    # Re-resolve common ingredient only if name changed (avoids needless lookup)
+                    if existing.ingredient_name != ing_data.ingredient_name:
+                        existing.ingredient_name = ing_data.ingredient_name
+                        existing.common_ingredient_id = await RecipeService.find_common_ingredient(
+                            db, ing_data.ingredient_name
+                        )
+                    existing.quantity = ing_data.quantity
+                    existing.unit = ing_data.unit
+                    existing.order = ing_data.order
+                    existing.prep_note = ing_data.prep_note
+                    existing.is_indexed = ing_data.is_indexed
+
+                    # Re-establish prep step links per payload to match prior replace semantics
+                    for link in list(existing.prep_step_links):
+                        await db.delete(link)
+                    if ing_data.prep_step_id:
+                        db.add(PrepStepIngredient(
+                            prep_step_id=ing_data.prep_step_id,
+                            recipe_ingredient_id=existing.id,
+                        ))
+                    elif ing_data.prep_step_description:
+                        description = ing_data.prep_step_description.strip()
+                        if description in prep_step_map:
+                            prep_step_id = prep_step_map[description].id
+                        else:
+                            new_prep_step = RecipePrepStep(
+                                recipe_id=recipe.id,
+                                description=description,
+                                order=len(prep_step_map),
+                            )
+                            db.add(new_prep_step)
+                            await db.flush()
+                            prep_step_map[description] = new_prep_step
+                            prep_step_id = new_prep_step.id
+                        db.add(PrepStepIngredient(
+                            prep_step_id=prep_step_id,
+                            recipe_ingredient_id=existing.id,
+                        ))
+                else:
+                    await RecipeService.create_ingredient(
+                        db=db,
+                        recipe_id=recipe.id,
+                        ingredient_data=ing_data,
+                        prep_step_map=prep_step_map,
+                    )
 
         # Handle instructions replacement if provided
         if recipe_data.instructions is not None:

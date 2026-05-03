@@ -40,9 +40,9 @@ describe('Layout Component', () => {
     const user = userEvent.setup();
     renderLayout();
 
-    // Click the menu button (contains ☰)
+    // Hover the menu area to open dropdown
     const menuButton = screen.getByRole('button', { name: /☰/i });
-    await user.click(menuButton);
+    await user.hover(menuButton);
 
     expect(screen.getByRole('link', { name: 'Recipes' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Schedules' })).toBeInTheDocument();
@@ -57,7 +57,7 @@ describe('Layout Component', () => {
     renderLayout();
 
     const menuButton = screen.getByRole('button', { name: /☰/i });
-    await user.click(menuButton);
+    await user.hover(menuButton);
 
     expect(screen.getByText(mockUser.username)).toBeInTheDocument();
   });
@@ -67,7 +67,7 @@ describe('Layout Component', () => {
     renderLayout();
 
     const menuButton = screen.getByRole('button', { name: /☰/i });
-    await user.click(menuButton);
+    await user.hover(menuButton);
 
     expect(screen.getByText(/Light Mode/i)).toBeInTheDocument();
   });
@@ -77,7 +77,7 @@ describe('Layout Component', () => {
     renderLayout();
 
     const menuButton = screen.getByRole('button', { name: /☰/i });
-    await user.click(menuButton);
+    await user.hover(menuButton);
 
     expect(screen.getByText('Logout')).toBeInTheDocument();
   });
@@ -94,7 +94,7 @@ describe('Layout Component', () => {
     renderLayout();
 
     const menuButton = screen.getByRole('button', { name: /☰/i });
-    await user.click(menuButton);
+    await user.hover(menuButton);
 
     const homeLink = screen.getByRole('link', { name: 'Home' });
     const recipesLink = screen.getByRole('link', { name: 'Recipes' });

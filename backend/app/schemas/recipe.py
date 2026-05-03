@@ -45,6 +45,18 @@ class RecipeIngredientCreate(RecipeIngredientBase):
     pass
 
 
+class RecipeIngredientUpsert(RecipeIngredientBase):
+    """Schema for upserting a recipe ingredient in update_recipe.
+
+    id present + matches existing  -> UPDATE in place
+    id present + no match           -> 422 error (stale or fabricated)
+    id absent                       -> INSERT new
+    Existing ids absent from payload -> DELETE
+    """
+
+    id: Optional[UUID] = None
+
+
 class RecipeIngredientUpdate(BaseModel):
     """Schema for updating a recipe ingredient."""
 
@@ -259,7 +271,7 @@ class RecipeUpdate(BaseModel):
     postmortem_notes: Optional[str] = None
     source_url: Optional[str] = None
     owner_id: Optional[UUID] = None  # For owner reassignment
-    ingredients: Optional[List[RecipeIngredientCreate]] = None
+    ingredients: Optional[List[RecipeIngredientUpsert]] = None
     instructions: Optional[List[RecipeInstructionCreate]] = None
     prep_steps: Optional[List[RecipePrepStepCreate]] = None
 

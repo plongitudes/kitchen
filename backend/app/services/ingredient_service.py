@@ -1,6 +1,6 @@
 """Service layer for ingredient management operations."""
 
-from sqlalchemy import select, func, delete, or_
+from sqlalchemy import select, func, delete, update, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from typing import List, Optional
@@ -35,7 +35,7 @@ class IngredientService:
         if category:
             query = query.where(CommonIngredient.category == category)
 
-        query = query.order_by(CommonIngredient.name)
+        query = query.order_by(func.lower(CommonIngredient.name))
 
         result = await db.execute(query)
         return result.scalars().all()
@@ -143,6 +143,16 @@ class IngredientService:
 
         if not alias:
             return False
+
+        # Clear common_ingredient_id on recipe ingredients that were mapped via this alias
+        await db.execute(
+            update(RecipeIngredient)
+            .where(
+                func.lower(RecipeIngredient.ingredient_name) == alias.alias.lower(),
+                RecipeIngredient.common_ingredient_id == ingredient_id,
+            )
+            .values(common_ingredient_id=None)
+        )
 
         # Delete the alias
         delete_query = delete(IngredientAlias).where(IngredientAlias.id == alias_id)

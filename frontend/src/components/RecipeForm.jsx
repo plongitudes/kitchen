@@ -121,6 +121,8 @@ const RecipeForm = ({ recipeId = null, initialData = null }) => {
         postmortem_notes: formData.postmortem_notes || null,
         source_url: formData.source_url || null,
         ingredients: formData.ingredients.map(ing => ({
+          // id present = backend updates in place; absent = INSERT new
+          ...(ing.id ? { id: ing.id } : {}),
           ingredient_name: ing.ingredient_name,
           quantity: ing.quantity ? parseFloat(ing.quantity) : null,
           unit: ing.unit || null,

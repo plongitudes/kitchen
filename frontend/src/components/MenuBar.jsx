@@ -201,7 +201,12 @@ const MenuBar = () => {
       }`}
     >
       {/* Zone 1: App Menu */}
-      <div className="relative" ref={menuRef}>
+      <div
+        className="relative"
+        ref={menuRef}
+        onMouseEnter={() => setMenuOpen(true)}
+        onMouseLeave={() => setMenuOpen(false)}
+      >
         <button
           onClick={() => setMenuOpen(!menuOpen)}
           className={`px-3 py-1.5 rounded text-sm font-bold transition flex items-center gap-1 ${
@@ -216,65 +221,68 @@ const MenuBar = () => {
         </button>
 
         {menuOpen && (
-          <div className={`absolute top-full left-0 mt-1 w-56 rounded-lg shadow-lg border py-1 ${
-            isDark
-              ? 'bg-gruvbox-dark-bg-soft border-gruvbox-dark-gray'
-              : 'bg-gruvbox-light-bg-soft border-gruvbox-light-gray'
-          }`}>
-            {NAV_LINKS.map((link) => {
-              const isActive = location.pathname === link.to ||
-                (link.to !== '/' && location.pathname.startsWith(link.to));
-              return (
-                <Link
-                  key={link.to}
-                  to={link.to}
-                  onClick={() => setMenuOpen(false)}
-                  className={`block px-4 py-2 text-sm transition ${
-                    isActive
-                      ? isDark
-                        ? 'bg-gruvbox-dark-bg text-gruvbox-dark-orange-bright font-semibold'
-                        : 'bg-gruvbox-light-bg text-gruvbox-light-orange-bright font-semibold'
-                      : isDark
-                        ? 'text-gruvbox-dark-fg hover:bg-gruvbox-dark-bg'
-                        : 'text-gruvbox-light-fg hover:bg-gruvbox-light-bg'
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-
-            <div className={`my-1 border-t ${
-              isDark ? 'border-gruvbox-dark-gray' : 'border-gruvbox-light-gray'
-            }`} />
-
-            <button
-              onClick={() => { toggleTheme(); setMenuOpen(false); }}
-              className={`w-full text-left px-4 py-2 text-sm transition ${
-                isDark
-                  ? 'text-gruvbox-dark-fg hover:bg-gruvbox-dark-bg'
-                  : 'text-gruvbox-light-fg hover:bg-gruvbox-light-bg'
-              }`}
-            >
-              {isDark ? '☀️ Light Mode' : '🌙 Dark Mode'}
-            </button>
-
-            <div className={`px-4 py-2 text-xs ${
-              isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'
+          <div className="absolute top-full left-0 pt-1 w-56">
+            {/* pt-1 above acts as an invisible hover bridge so the cursor doesn't leave the hover zone when crossing the visual gap */}
+            <div className={`rounded-lg shadow-lg border py-1 ${
+              isDark
+                ? 'bg-gruvbox-dark-bg-soft border-gruvbox-dark-gray'
+                : 'bg-gruvbox-light-bg-soft border-gruvbox-light-gray'
             }`}>
-              {user?.username}
-            </div>
+              {NAV_LINKS.map((link) => {
+                const isActive = location.pathname === link.to ||
+                  (link.to !== '/' && location.pathname.startsWith(link.to));
+                return (
+                  <Link
+                    key={link.to}
+                    to={link.to}
+                    onClick={() => setMenuOpen(false)}
+                    className={`block px-4 py-2 text-sm transition ${
+                      isActive
+                        ? isDark
+                          ? 'bg-gruvbox-dark-bg text-gruvbox-dark-orange-bright font-semibold'
+                          : 'bg-gruvbox-light-bg text-gruvbox-light-orange-bright font-semibold'
+                        : isDark
+                          ? 'text-gruvbox-dark-fg hover:bg-gruvbox-dark-bg'
+                          : 'text-gruvbox-light-fg hover:bg-gruvbox-light-bg'
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
 
-            <button
-              onClick={handleLogout}
-              className={`w-full text-left px-4 py-2 text-sm transition ${
-                isDark
-                  ? 'text-gruvbox-dark-red hover:bg-gruvbox-dark-bg'
-                  : 'text-gruvbox-light-red hover:bg-gruvbox-light-bg'
-              }`}
-            >
-              Logout
-            </button>
+              <div className={`my-1 border-t ${
+                isDark ? 'border-gruvbox-dark-gray' : 'border-gruvbox-light-gray'
+              }`} />
+
+              <button
+                onClick={() => { toggleTheme(); setMenuOpen(false); }}
+                className={`w-full text-left px-4 py-2 text-sm transition ${
+                  isDark
+                    ? 'text-gruvbox-dark-fg hover:bg-gruvbox-dark-bg'
+                    : 'text-gruvbox-light-fg hover:bg-gruvbox-light-bg'
+                }`}
+              >
+                {isDark ? '☀️ Light Mode' : '🌙 Dark Mode'}
+              </button>
+
+              <div className={`px-4 py-2 text-xs ${
+                isDark ? 'text-gruvbox-dark-gray' : 'text-gruvbox-light-gray'
+              }`}>
+                {user?.username}
+              </div>
+
+              <button
+                onClick={handleLogout}
+                className={`w-full text-left px-4 py-2 text-sm transition ${
+                  isDark
+                    ? 'text-gruvbox-dark-red hover:bg-gruvbox-dark-bg'
+                    : 'text-gruvbox-light-red hover:bg-gruvbox-light-bg'
+                }`}
+              >
+                Logout
+              </button>
+            </div>
           </div>
         )}
       </div>

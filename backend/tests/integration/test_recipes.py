@@ -200,6 +200,146 @@ class TestRecipeBasicOperations:
         assert data["dish_type"] == "breakfast"
         assert data["cook_time_minutes"] == 10
 
+    def test_update_recipe_ingredients_diff_preserves_ids(
+        self,
+        async_authenticated_client: TestClient,
+    ):
+        """Updating with id-bearing ingredients keeps existing rows in place."""
+        create_response = async_authenticated_client.post(
+            "/recipes",
+            json={
+                "name": "Diff Test",
+                "dish_type": "dinner",
+                "cook_time_minutes": 20,
+                "ingredients": [
+                    {"ingredient_name": "salt", "order": 0},
+                    {"ingredient_name": "pepper", "order": 1},
+                ],
+                "instructions": [],
+            },
+        )
+        recipe_id = create_response.json()["id"]
+        original_ids = {ing["ingredient_name"]: ing["id"] for ing in create_response.json()["ingredients"]}
+
+        # Update only the quantity of salt; keep both ingredients with their ids
+        update_response = async_authenticated_client.put(
+            f"/recipes/{recipe_id}",
+            json={
+                "ingredients": [
+                    {"id": original_ids["salt"], "ingredient_name": "salt", "quantity": 2, "unit": "teaspoon", "order": 0},
+                    {"id": original_ids["pepper"], "ingredient_name": "pepper", "order": 1},
+                ],
+            },
+        )
+        assert update_response.status_code == 200
+        new_ids = {ing["ingredient_name"]: ing["id"] for ing in update_response.json()["ingredients"]}
+        assert new_ids == original_ids, "ingredient ids must be stable across diff-based updates"
+        salt = next(i for i in update_response.json()["ingredients"] if i["ingredient_name"] == "salt")
+        assert salt["quantity"] == 2
+        assert salt["unit"] == "teaspoon"
+
+    def test_update_recipe_ingredients_insert_new(
+        self,
+        async_authenticated_client: TestClient,
+    ):
+        """Ingredients without an id are inserted as new rows."""
+        create_response = async_authenticated_client.post(
+            "/recipes",
+            json={
+                "name": "Insert Test",
+                "dish_type": "dinner",
+                "cook_time_minutes": 20,
+                "ingredients": [{"ingredient_name": "flour", "order": 0}],
+                "instructions": [],
+            },
+        )
+        recipe_id = create_response.json()["id"]
+        flour_id = create_response.json()["ingredients"][0]["id"]
+
+        update_response = async_authenticated_client.put(
+            f"/recipes/{recipe_id}",
+            json={
+                "ingredients": [
+                    {"id": flour_id, "ingredient_name": "flour", "order": 0},
+                    {"ingredient_name": "sugar", "order": 1},
+                ],
+            },
+        )
+        assert update_response.status_code == 200
+        ingredients = update_response.json()["ingredients"]
+        assert len(ingredients) == 2
+        flour = next(i for i in ingredients if i["ingredient_name"] == "flour")
+        sugar = next(i for i in ingredients if i["ingredient_name"] == "sugar")
+        assert flour["id"] == flour_id, "existing flour kept its id"
+        assert sugar["id"] != flour_id, "new sugar got a fresh id"
+
+    def test_update_recipe_ingredients_delete_missing(
+        self,
+        async_authenticated_client: TestClient,
+    ):
+        """Existing ingredients absent from the payload are deleted."""
+        create_response = async_authenticated_client.post(
+            "/recipes",
+            json={
+                "name": "Delete Test",
+                "dish_type": "dinner",
+                "cook_time_minutes": 20,
+                "ingredients": [
+                    {"ingredient_name": "keep", "order": 0},
+                    {"ingredient_name": "drop", "order": 1},
+                ],
+                "instructions": [],
+            },
+        )
+        recipe_id = create_response.json()["id"]
+        keep_id = next(i["id"] for i in create_response.json()["ingredients"] if i["ingredient_name"] == "keep")
+
+        update_response = async_authenticated_client.put(
+            f"/recipes/{recipe_id}",
+            json={
+                "ingredients": [
+                    {"id": keep_id, "ingredient_name": "keep", "order": 0},
+                ],
+            },
+        )
+        assert update_response.status_code == 200
+        ingredients = update_response.json()["ingredients"]
+        assert len(ingredients) == 1
+        assert ingredients[0]["id"] == keep_id
+        assert ingredients[0]["ingredient_name"] == "keep"
+
+    def test_update_recipe_ingredients_rejects_unknown_id(
+        self,
+        async_authenticated_client: TestClient,
+    ):
+        """Sending an id that doesn't belong to this recipe returns 422."""
+        create_response = async_authenticated_client.post(
+            "/recipes",
+            json={
+                "name": "Unknown ID Test",
+                "dish_type": "dinner",
+                "cook_time_minutes": 20,
+                "ingredients": [{"ingredient_name": "real", "order": 0}],
+                "instructions": [],
+            },
+        )
+        recipe_id = create_response.json()["id"]
+
+        update_response = async_authenticated_client.put(
+            f"/recipes/{recipe_id}",
+            json={
+                "ingredients": [
+                    {
+                        "id": "00000000-0000-0000-0000-000000000000",
+                        "ingredient_name": "fabricated",
+                        "order": 0,
+                    },
+                ],
+            },
+        )
+        assert update_response.status_code == 422
+        assert "Unknown ingredient ids" in update_response.json()["detail"]
+
 
 class TestRecipeRetirement:
     """Test recipe retirement and validation."""
